@@ -5,26 +5,37 @@ import { Ionicons } from '@expo/vector-icons';
 import CounterHomeScreen from '@/features/counters/screens/CounterHomeScreen';
 
 const Tab = createBottomTabNavigator();
+
  
+
+export const TabOption = Object.freeze({
+  COUNTER: 'Counters',
+  ANALYTICS: 'Analytics',
+  GOALS: 'Goals',
+  SETTINGS: 'Settings',
+});
+
+ 
+
 function getTabIcon(routeName, focused) {
   switch (routeName) {
-    case 'Counters':
+    case TabOption.COUNTER:
       return focused ? 'add-circle' : 'add-circle-outline';
 
-    case 'Analytics':
+    case TabOption.ANALYTICS:
       return focused ? 'bar-chart' : 'bar-chart-outline';
 
-    case 'Goals':
+    case TabOption.GOALS:
       return focused ? 'flag' : 'flag-outline';
 
-    case 'Settings':
+    case TabOption.SETTINGS:
       return focused ? 'settings' : 'settings-outline';
 
     default:
       return 'ellipse-outline';
   }
 }
- 
+
 function createScreenOptions({ route }) {
   return {
     tabBarIcon: ({ focused = false, color = '#000', size = 24 }) => {
@@ -36,6 +47,7 @@ function createScreenOptions({ route }) {
     headerShown: false,
   };
 }
+
  
 
 function Placeholder({ title }) {
@@ -45,15 +57,16 @@ function Placeholder({ title }) {
     </View>
   );
 }
+
  
 
 export default function TabNavigator() {
   return (
     <Tab.Navigator screenOptions={createScreenOptions}>
-      <Tab.Screen name="Counters" component={CounterHomeScreen} />
-      <Tab.Screen name="Analytics" children={() => <Placeholder title="Analytics" />} />
-      <Tab.Screen name="Goals" children={() => <Placeholder title="Goals" />} />
-      <Tab.Screen name="Settings" children={() => <Placeholder title="Settings" />} />
+      <Tab.Screen name={TabOption.COUNTER} component={CounterHomeScreen} />
+      <Tab.Screen name={TabOption.ANALYTICS} children={() => <Placeholder title="Analytics" />} />
+      <Tab.Screen name={TabOption.GOALS} children={() => <Placeholder title="Goals" />} />
+      <Tab.Screen name={TabOption.SETTINGS} children={() => <Placeholder title="Settings" />} />
     </Tab.Navigator>
   );
 }
