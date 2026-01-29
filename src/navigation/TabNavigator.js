@@ -17,7 +17,7 @@ export const TabOption = Object.freeze({
 
  
 
-function getTabIcon(routeName, focused) {
+function getTabIcon(routeName=' ', focused = false) {
   switch (routeName) {
     case TabOption.COUNTER:
       return focused ? 'add-circle' : 'add-circle-outline';
@@ -50,7 +50,7 @@ function createScreenOptions({ route }) {
 
  
 
-function Placeholder({ title }) {
+function Placeholder({ title = '' } = {}) {
   return (
     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
       <Text>{title}</Text>
