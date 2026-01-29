@@ -1,7 +1,9 @@
 import { View, FlatList, Button } from 'react-native';
-import { useCounterStore } from '../../../store/counterStore';
-import CounterCard from '../components/CounterCard';
-import { createCounter } from '../model';
+import { createCounter } from '@/features/counters/model';
+
+import { useCounterStore } from '@/store/counterStore';
+import CounterCard from '@/features/counters/components/CounterCard';
+
 
 export default function CounterHomeScreen() {
   const { counters, createCounter: addCounter } = useCounterStore();

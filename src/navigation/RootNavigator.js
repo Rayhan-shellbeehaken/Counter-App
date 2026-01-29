@@ -1,6 +1,6 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import CounterHomeScreen from '../features/counters/screens/CounterHomeScreen';
+import CounterHomeScreen from '@/features/counters/screens/CounterHomeScreen';
 
 const Tab = createBottomTabNavigator();
 

@@ -1,5 +1,5 @@
 import { View, Text, TouchableOpacity } from 'react-native';
-import { useCounterStore } from '../../../store/counterStore';
+import { useCounterStore } from '@/store/counterStore';
 
 export default function CounterCard({ counter }) {
   const { increment, decrement } = useCounterStore();
