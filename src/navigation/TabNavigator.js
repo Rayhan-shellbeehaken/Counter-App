@@ -36,7 +36,7 @@ function getTabIcon(routeName=' ', focused = false) {
   }
 }
 
-function createScreenOptions({ route }) {
+function createScreenOptions({ route = {} } = {}){
   return {
     tabBarIcon: ({ focused = false, color = '#000', size = 24 }) => {
       const iconName = getTabIcon(route.name, focused);
