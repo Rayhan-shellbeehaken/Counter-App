@@ -1,17 +1,16 @@
-import { View, FlatList, Button } from 'react-native';
-import { createCounter } from '@/features/counters/model';
+import { View, FlatList, Button } from "react-native";
+import { createCounter } from "@/features/counters/model";
 
-import { useCounterStore } from '@/store/counterStore';
-import CounterCard from '@/features/counters/components/CounterCard';
-
+import { useCounterStore } from "@/store/counterStore";
+import CounterCard from "@/features/counters/components/CounterCard";
 
 export default function CounterHomeScreen() {
   const { counters, createCounter: addCounter } = useCounterStore();
 
   const handleAdd = () => {
     const counter = createCounter({
-      name: 'Water Intake',
-      color: '#4cc9f0',
+      name: "Water Intake",
+      color: "#4cc9f0",
       step: 1,
     });
     addCounter(counter);
