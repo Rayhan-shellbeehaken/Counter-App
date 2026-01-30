@@ -1,13 +1,13 @@
-import { runOnJS } from 'react-native-reanimated';
-import { Gesture } from 'react-native-gesture-handler';
+import { runOnJS } from "react-native-reanimated";
+import { Gesture } from "react-native-gesture-handler";
 
-import { resolveSwipeDirection, SwipeDirection } from '@/gestures/swipeLogic';
+import { resolveSwipeDirection, SwipeDirection } from "@/gestures/swipeLogic";
 
 export function createSwipeGesture({
   onSwipeRight = () => {},
   onSwipeLeft = () => {},
   threshold = 50,
-} = {}) {
+} ) {
   return Gesture.Pan().onEnd((event = {}) => {
     const translationX = event?.translationX ?? 0;
 
