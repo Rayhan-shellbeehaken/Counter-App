@@ -1,5 +1,5 @@
- 
-import RootNavigator from "@/navigation/RootNavigator";
+import RootNavigator from '@/navigation/RootNavigator';
 export default function App() {
-  return <RootNavigator />;
+  return renderApp();
 }
+const renderApp = () => <RootNavigator />;
