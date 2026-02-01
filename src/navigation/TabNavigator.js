@@ -2,6 +2,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import CounterHomeScreen from '@/features/counters/screens/CounterHomeScreen';
+import AnalyticsScreen from '@/features/analytics/screens/AnalyticsScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -74,10 +75,7 @@ export default function TabNavigator() {
 const renderTabNavigator = () => (
   <Tab.Navigator screenOptions={createScreenOptions}>
     <Tab.Screen name={TabOption.COUNTER} component={CounterHomeScreen} />
-    <Tab.Screen
-      name={TabOption.ANALYTICS}
-      children={() => <Placeholder title="Analytics" />}
-    />
+    <Tab.Screen name={TabOption.ANALYTICS} component={AnalyticsScreen} />
     <Tab.Screen name={TabOption.GOALS} children={() => <Placeholder title="Goals" />} />
     <Tab.Screen
       name={TabOption.SETTINGS}
