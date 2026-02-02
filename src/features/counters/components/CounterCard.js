@@ -1,18 +1,33 @@
-import { View, Text } from "react-native";
-import Animated from "react-native-reanimated";
-import { GestureDetector } from "react-native-gesture-handler";
-
-import { useCounterStore } from "@/store/counterStore";
-import { createSwipeGesture } from "@/gestures/swipeHandler";
-export default function CounterCard({ counter = {}}) {
+import { View, Text, TouchableOpacity } from 'react-native';
+import { useCounterStore } from '@/store/counterStore';
+import { useUndoRedo } from '@/hooks/useUndoRedo';
+import { v4 as uuid } from 'uuid';
+export default function CounterCard({ counter }) {
   const { increment, decrement } = useCounterStore();
-  const { id = "", name = "", value = 0, step = 1, color = "#ddd" } = counter;
-  const gesture = createSwipeGesture({
-    onSwipeRight: () => increment(id, step),
-    onSwipeLeft: () => decrement(id, step),
-    threshold: 40,
-  });
+const { init, registerAction, undo, redo } = useUndoRedo(counterId, setValue);
 
+useEffect(() => {
+  init();
+}, []);
+
+const onIncrement = () => {
+  const prev = value;
+  const next = value + step;
+
+  setValue(next);
+
+  registerAction({
+    id: uuid(),
+    counterId,
+    type: 'INCREMENT',
+    payload: {
+      prevValue: prev,
+      nextValue: next,
+      delta: step
+    },
+    timestamp: Date.now()
+  });
+};
   return (
     <GestureDetector gesture={gesture}>
       <Animated.View
