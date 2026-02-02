@@ -4,7 +4,7 @@ import { GestureDetector } from "react-native-gesture-handler";
 
 import { useCounterStore } from "@/store/counterStore";
 import { createSwipeGesture } from "@/gestures/swipeHandler";
-export default function CounterCard({ counter = {} }) {
+export default function CounterCard({ counter = {}}) {
   const { increment, decrement } = useCounterStore();
   const { id = "", name = "", value = 0, step = 1, color = "#ddd" } = counter;
   const gesture = createSwipeGesture({

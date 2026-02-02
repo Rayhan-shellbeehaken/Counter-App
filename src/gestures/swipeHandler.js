@@ -7,7 +7,7 @@ export function createSwipeGesture({
   onSwipeRight = () => {},
   onSwipeLeft = () => {},
   threshold = 50,
-} ) {
+}){
   return Gesture.Pan().onEnd((event = {}) => {
     const translationX = event?.translationX ?? 0;
 
