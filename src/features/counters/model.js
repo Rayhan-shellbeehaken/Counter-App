@@ -1,4 +1,4 @@
-export const createCounter = ({name = '', color = '', step = 1}) => ({
+export const createCounter = ({ name = "", color = "", step = 1 }) => ({
   id: Date.now().toString(),
   name,
   color,
