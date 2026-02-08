@@ -8,10 +8,10 @@ const Tab = createBottomTabNavigator();
 
  
 export const TabOption = Object.freeze({
-  COUNTER: 'Counters',
-  ANALYTICS: 'Analytics',
-  GOALS: 'Goals',
-  SETTINGS: 'Settings',
+  COUNTER: "Counters",
+  ANALYTICS: "Analytics",
+  GOALS: "Goals",
+  SETTINGS: "Settings",
 });
 
 const defaultProps = {
@@ -34,7 +34,7 @@ const getTabIcon = (routeName = defaultProps.routeName, focused = defaultProps.f
     case TabOption.SETTINGS:
       return focused ? 'settings' : 'settings-outline';
     default:
-      return 'ellipse-outline';
+      return "ellipse-outline";
   }
 };
 
@@ -57,9 +57,7 @@ const renderTabIcon = (routeName, focused, color, size) => {
 const Placeholder = ({ title = defaultProps.title } = {}) =>
   renderPlaceholder(title);
 
-/**
- * Render placeholder screen
- */
+ 
 const renderPlaceholder = (title) => (
   <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
     <Text>{title}</Text>
