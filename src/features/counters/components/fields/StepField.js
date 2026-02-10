@@ -1,16 +1,23 @@
 import { View, Text, TextInput, TouchableOpacity } from "react-native";
 import { Controller } from "react-hook-form";
 
+const noop = () => {};
+
 export default function StepField({ control }) {
   return (
     <Controller
       control={control}
       name="step"
+      rules={{
+        required: "Step is required",
+        min: { value: 1, message: "Step must be at least 1" },
+      }}
       render={({ field }) => (
         <View style={{ marginBottom: 16 }}>
           <Text style={label}>Step</Text>
+
           <View style={{ flexDirection: "row", gap: 8 }}>
-            {["1", "5", "10"].map((v) => (
+            {[1, 5, 10].map((v) => (
               <TouchableOpacity
                 key={v}
                 onPress={() => field.onChange(v)}
@@ -21,10 +28,17 @@ export default function StepField({ control }) {
                 </Text>
               </TouchableOpacity>
             ))}
+
             <TextInput
               keyboardType="number-pad"
-              value={["1", "5", "10"].includes(field.value) ? "" : field.value}
-              onChangeText={(t) => field.onChange(t || "1")}
+              value={
+                [1, 5, 10].includes(field.value)
+                  ? ""
+                  : String(field.value ?? "")
+              }
+              onChangeText={(t) =>
+                field.onChange(t ? Number(t) : 1)
+              }
               style={input}
             />
           </View>

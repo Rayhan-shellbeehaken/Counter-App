@@ -6,13 +6,21 @@ export default function MaxValueField({ control }) {
     <Controller
       control={control}
       name="maxValue"
+      rules={{
+        min: {
+          value: 0,
+          message: "Max value must be positive",
+        },
+      }}
       render={({ field }) => (
         <View style={{ marginBottom: 16 }}>
-          <Text style={label}>Max Value</Text>
+          <Text style={label}>Max Value (optional)</Text>
           <TextInput
             keyboardType="number-pad"
-            value={field.value}
-            onChangeText={field.onChange}
+            value={field.value === null ? "" : String(field.value)}
+            onChangeText={(t) =>
+              field.onChange(t === "" ? null : Number(t))
+            }
             style={input}
           />
         </View>

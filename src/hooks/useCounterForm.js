@@ -1,5 +1,4 @@
 import { useForm } from "react-hook-form";
-import { Alert } from "react-native";
 import {
   CounterIconEnum,
   CounterCategoryEnum,
@@ -10,43 +9,52 @@ const noop = () => {};
 const COLORS = Object.values(CounterColorEnum);
 
 export function useCounterForm({ onSubmit = noop }) {
-  const form = useForm({
+  const {
+    control,
+    handleSubmit,
+    reset,
+    setError,
+  } = useForm({
     defaultValues: {
       name: "",
       icon: CounterIconEnum.GENERIC,
       category: CounterCategoryEnum.GENERAL,
-      step: "1",
-      minValue: "",
-      maxValue: "",
+      step: 1,
+      minValue: null,
+      maxValue: null,
     },
   });
 
-  const submit = (data) => {
-    const min = data.minValue ? parseInt(data.minValue, 10) : null;
-    const max = data.maxValue ? parseInt(data.maxValue, 10) : null;
+  const submit = handleSubmit((data) => {
+    const { minValue, maxValue } = data;
 
-    if (min !== null && max !== null && min > max) {
-      Alert.alert("Error", "Min value cannot be greater than max value");
+    // Cross-field validation
+    if (
+      minValue !== null &&
+      maxValue !== null &&
+      minValue > maxValue
+    ) {
+      setError("maxValue", {
+        type: "validate",
+        message: "Max value must be greater than Min value",
+      });
       return;
     }
 
-    const color = COLORS[Math.floor(Math.random() * COLORS.length)];
+    const color =
+      COLORS[Math.floor(Math.random() * COLORS.length)];
 
     onSubmit({
+      ...data,
       name: data.name.trim(),
-      icon: data.icon,
-      category: data.category,
-      step: parseInt(data.step, 10) || 1,
-      minValue: min,
-      maxValue: max,
       color,
     });
 
-    form.reset();
-  };
+    reset();
+  });
 
   return {
-    ...form,
+    control,
     submit,
   };
 }

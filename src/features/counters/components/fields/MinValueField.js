@@ -6,13 +6,21 @@ export default function MinValueField({ control }) {
     <Controller
       control={control}
       name="minValue"
+      rules={{
+        min: {
+          value: 0,
+          message: "Min value cannot be negative",
+        },
+      }}
       render={({ field }) => (
         <View style={{ marginBottom: 16 }}>
-          <Text style={label}>Min Value</Text>
+          <Text style={label}>Min Value (optional)</Text>
           <TextInput
             keyboardType="number-pad"
-            value={field.value}
-            onChangeText={field.onChange}
+            value={field.value === null ? "" : String(field.value)}
+            onChangeText={(t) =>
+              field.onChange(t === "" ? null : Number(t))
+            }
             style={input}
           />
         </View>
