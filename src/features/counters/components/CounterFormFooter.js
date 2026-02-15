@@ -46,6 +46,7 @@ const getButtonStyle = (primary) => ({
   borderRadius: 8,
   backgroundColor: primary ? "#000" : "#e8e8e8",
   alignItems: "center",
+  marginBottom: 24,
 });
 
 const getTextStyle = (primary) => ({

@@ -94,3 +94,13 @@ export const getChartDataPoints = (
 
   return buckets;
 };
+/**
+ * Minimal analytics snapshot for goal evaluation
+ */
+export const getAnalyticsSnapshot = ({
+  actions = [],
+} = {}) => {
+  return {
+    total: actions.length,
+  };
+};

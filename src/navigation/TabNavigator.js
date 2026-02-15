@@ -5,12 +5,11 @@ import { Ionicons } from '@expo/vector-icons';
 
 import CounterHomeScreen from '@/features/counters/screens/CounterHomeScreen';
 import AnalyticsScreen from '@/features/analytics/screens/AnalyticsScreen';
+import GoalsScreen from '@/features/goals/screens/GoalsScreen';
 
 const Tab = createBottomTabNavigator();
 
-/* ---------------------------------
-   TAB ENUM (SOURCE OF TRUTH)
---------------------------------- */
+ 
 export const TabOption = Object.freeze({
   COUNTER: 'Counters',
   ANALYTICS: 'Analytics',
@@ -18,9 +17,7 @@ export const TabOption = Object.freeze({
   SETTINGS: 'Settings',
 });
 
-/* ---------------------------------
-   DEFENSIVE DEFAULTS
---------------------------------- */
+ 
 const defaultProps = {
   routeName: TabOption.COUNTER,
   focused: false,
@@ -28,9 +25,7 @@ const defaultProps = {
   size: 24,
 };
 
-/* ---------------------------------
-   ICON RESOLVER (PURE FUNCTION)
---------------------------------- */
+ 
 const getTabIcon = (
   routeName = defaultProps.routeName,
   focused = defaultProps.focused
@@ -48,10 +43,7 @@ const getTabIcon = (
       return 'ellipse-outline';
   }
 };
-
-/* ---------------------------------
-   TAB ICON RENDERER (PURE)
---------------------------------- */
+ 
 const renderTabIcon = (
   routeName,
   focused,
@@ -61,10 +53,7 @@ const renderTabIcon = (
   const iconName = getTabIcon(routeName, focused);
   return <Ionicons name={iconName} size={size} color={color} />;
 };
-
-/* ---------------------------------
-   SCREEN OPTIONS FACTORY
---------------------------------- */
+ 
 const createScreenOptions = ({ route = {} } = {}) => ({
   tabBarIcon: ({
     focused = defaultProps.focused,
@@ -77,9 +66,7 @@ const createScreenOptions = ({ route = {} } = {}) => ({
   headerShown: false,
 });
 
-/* ---------------------------------
-   ROOT TAB NAVIGATOR
---------------------------------- */
+ 
 export default function TabNavigator() {
   return (
     <Tab.Navigator screenOptions={createScreenOptions}>
@@ -95,12 +82,12 @@ export default function TabNavigator() {
 
       <Tab.Screen
         name={TabOption.GOALS}
-        component={AnalyticsScreen} // placeholder for now
+        component={GoalsScreen} // placeholder for now
       />
 
       <Tab.Screen
         name={TabOption.SETTINGS}
-        component={AnalyticsScreen} // placeholder for now
+        component={GoalsScreen} // placeholder for now
       />
     </Tab.Navigator>
   );

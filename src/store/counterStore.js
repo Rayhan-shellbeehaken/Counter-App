@@ -4,7 +4,9 @@ import { useHistoryStore } from '@/store/historyStore';
 import { createHistoryAction, HistoryActionTypeEnum } from '@/models/HistoryAction';
 import { CounterCategoryEnum } from '@/enums/CounterEnums';
 
- 
+ import { evaluateGoalsForCounter } from '@/hooks/useGoalEvaluator';
+import { getAnalyticsSnapshot } from '@/services/analyticsService';
+
 export const useCounterStore = create((set, get) => ({
   counters: [],
   selectedCategory: CounterCategoryEnum.GENERAL,
@@ -15,29 +17,43 @@ export const useCounterStore = create((set, get) => ({
       counters: [...state.counters, counter],
     })),
  
-  increment: (id, step = 1) => {
-    set((state) => {
-      const counter = state.counters.find((c) => c.id === id);
-      if (!counter) return state;
+ increment: (id = '', step = 1) => {
+  set((state) => {
+    const counter = state.counters.find((c) => c.id === id);
+    if (!counter) return state;
 
-      const newValue = handleMaxLimitCheck(counter, counter.value + step);
-      const action = createHistoryAction({
-        type: HistoryActionTypeEnum.INCREMENT,
-        counterId: id,
-        prevValue: counter.value,
-        nextValue: newValue,
-        step,
-      });
+    const newValue = handleMaxLimitCheck(counter, counter.value + step);
 
-      useHistoryStore.getState().pushAction(id, action);
+    const updatedCounter = {
+      ...counter,
+      value: newValue,
+    };
 
-      return {
-        counters: state.counters.map((c) =>
-          c.id === id ? { ...c, value: newValue } : c
-        ),
-      };
+    const action = createHistoryAction({
+      type: HistoryActionTypeEnum.INCREMENT,
+      counterId: id,
+      prevValue: counter.value,
+      nextValue: newValue,
+      step,
     });
-  },
+
+    useHistoryStore.getState().pushAction(id, action);
+
+evaluateGoalsForCounter({
+  counter: updatedCounter,   // ✅ EXPLICIT KEY
+  analytics: getAnalyticsSnapshot({
+    actions: useHistoryStore.getState().analyticsHistory?.[id] ?? [],
+  }),
+});
+
+
+    return {
+      counters: state.counters.map((c) =>
+        c.id === id ? updatedCounter : c
+      ),
+    };
+  });
+},
 
   
   decrement: (id, step = 1) => {
@@ -97,6 +113,7 @@ export const useCounterStore = create((set, get) => ({
 }));
 
  
+
 const handleMaxLimitCheck = (counter, proposedValue) => {
   if (counter?.maxValue === null || counter?.maxValue === undefined) {
     return proposedValue;
@@ -129,3 +146,9 @@ const handleMinLimitCheck = (counter, proposedValue) => {
 
   return proposedValue;
 };
+const updatedCounter = { ...counter, value: newValue };
+
+evaluateGoalsForCounter({
+  counter: updatedCounter,
+  analytics: getAnalyticsSnapshot(id),
+});
