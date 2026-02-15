@@ -1,40 +1,36 @@
-import { useState, useMemo } from "react";
-import { TimePeriodEnum } from "@/enums/AnalyticsEnums";
-import { useCounterStore } from "@/store/counterStore";
-import { useAnalyticsStore } from "@/store/analyticsStore";
+import { useMemo } from 'react';
+
+import { useHistoryStore } from '@/store/historyStore';
+import { AnalyticsPeriodEnum } from '@/enums/AnalyticsEnums';
 import {
-  calculateCounterStats,
-  getChartDataPoints,
-} from "@/services/analyticsService";
+  filterActionsByPeriod,
+  calculateTotals,
+  buildDailySeries,
+  calculateStreak,
+} from '@/services/analyticsService';
 
-const noop = () => {};
-
-export function useAnalytics({
-  initialPeriod = TimePeriodEnum.SEVEN_DAYS,
-} = {}) {
-  const counters = useCounterStore((s) => s.counters);
-  const events = useAnalyticsStore((s) => s.events);
-
-  const [period, setPeriod] = useState(initialPeriod);
+export const useAnalytics = ({
+  counterId = '',
+  period = AnalyticsPeriodEnum.WEEK,
+} = {}) => {
+  const analyticsHistory =
+    useHistoryStore(
+      (state) => state.analyticsHistory[counterId]
+    ) ?? [];
 
   const analyticsData = useMemo(() => {
-    return counters.map((counter) => {
-      const counterEvents = events.filter(
-        (e) => e.counterId === counter.id
-      );
-
-      return {
-        counter,
-        stats: calculateCounterStats(counter, counterEvents, period),
-        chart: getChartDataPoints(counterEvents, period),
-      };
+    const filteredActions = filterActionsByPeriod({
+      actions: analyticsHistory,
+      period,
     });
-  }, [counters, events, period]);
 
-  return {
-    period,
-    setPeriod,
-    analyticsData,
-    hasCounters: counters.length > 0,
-  };
-}
+    return {
+      total: calculateTotals(filteredActions),
+      chartData: buildDailySeries(filteredActions),
+      streak: calculateStreak(filteredActions),
+      hasData: filteredActions.length > 0,
+    };
+  }, [analyticsHistory, period]);
+
+  return analyticsData;
+};

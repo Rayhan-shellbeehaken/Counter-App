@@ -8,8 +8,7 @@ import { calculateCounterStats, getPeriodLabel, getChartDataPoints } from '@/ser
 const defaultProps = {
   period: TimePeriodEnum.SEVEN_DAYS,
 };
-
- console.log("Analytics counters:", counters);
+ 
 
 export default function AnalyticsScreen({
   period = defaultProps.period,

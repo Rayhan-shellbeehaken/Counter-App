@@ -4,7 +4,7 @@ import {
   CounterCategoryEnum,
   CounterColorEnum,
 } from "@/enums/CounterEnums";
-
+import { CounterFieldEnum } from "@/enums/CounterEnums";
 const noop = () => {};
 const COLORS = Object.values(CounterColorEnum);
 
@@ -34,10 +34,10 @@ export function useCounterForm({ onSubmit = noop }) {
       maxValue !== null &&
       minValue > maxValue
     ) {
-      setError("maxValue", {
-        type: "validate",
-        message: "Max value must be greater than Min value",
-      });
+    setError(CounterFieldEnum.MAX_VALUE, {
+  type: "validate",
+  message: "Max value must be greater than Min value",
+});
       return;
     }
 

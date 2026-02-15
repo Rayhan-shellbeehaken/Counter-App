@@ -17,9 +17,7 @@ export default function CounterFormModal({
   onClose = noop,
   onSubmit = noop,
 }) {
-  /* ---------------------------------
-     FORM BRAIN COMES FROM HOOK
-     --------------------------------- */
+   
   const { control, submit } = useCounterForm({ onSubmit });
 
   return (

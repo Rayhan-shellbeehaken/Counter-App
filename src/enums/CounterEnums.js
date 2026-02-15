@@ -38,3 +38,11 @@ export const HistoryActionTypeEnum = Object.freeze({
   DECREMENT: 'DECREMENT',
   SET: 'SET',
 });
+export const CounterFieldEnum = Object.freeze({
+  NAME: "name",
+  ICON: "icon",
+  CATEGORY: "category",
+  STEP: "step",
+  MIN_VALUE: "minValue",
+  MAX_VALUE: "maxValue",
+});
