@@ -1,9 +1,5 @@
 import { Alert } from 'react-native';
 
-/**
- * Show goal completion notification
- * (Toast / Alert / Expo Notification later)
- */
 export const showGoalCompletedNotification = ({
   goal = {},
   counter = {},

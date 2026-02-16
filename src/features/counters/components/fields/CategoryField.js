@@ -17,7 +17,7 @@ export default function CategoryField({ control = null }) {
       control={control}
       name="category"
       render={({ field }) => (
-        <View style={{ marginBottom: 16 }}>
+        <View style={{ marginBottom: 8 }}>
           <Text style={label}>Category</Text>
           <View style={row}>
             <CategoryList

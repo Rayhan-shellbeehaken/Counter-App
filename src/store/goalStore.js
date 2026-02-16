@@ -1,14 +1,5 @@
-// src/store/goalStore.js
-
 import { create } from 'zustand';
-
-import { createGoal } from '@/models/GoalModel';
 import { GoalStatusEnum } from '@/enums/GoalEnums';
-import { evaluateGoal } from '@/services/goalService';
-import { getAnalyticsSnapshot } from '@/services/analyticsService';
-
-import { useCounterStore } from '@/store/counterStore';
-import { useHistoryStore } from '@/store/historyStore';
 
 const defaultState = {
   goals: [],
@@ -17,66 +8,41 @@ const defaultState = {
 export const useGoalStore = create((set, get) => ({
   ...defaultState,
 
-  /* ---------------------------------
-     CREATE GOAL
-  --------------------------------- */
-  addGoal: (goalConfig = {}) =>
-    set((state = defaultState) => ({
-      goals: [...(state.goals ?? []), createGoal(goalConfig)],
-    })),
+  addGoal: (goal = null) => {
+    if (!goal?.id) return;
 
-  /* ---------------------------------
-     EVALUATE GOALS FOR A COUNTER
-  --------------------------------- */
-  checkGoalsForCounter: (counterId = '') => {
-    if (!counterId) return;
-
-    const counter =
-      useCounterStore
-        .getState()
-        .counters
-        .find((c = {}) => c.id === counterId);
-
-    if (!counter) return;
-
-    const actions =
-      useHistoryStore
-        .getState()
-        .analyticsHistory?.[counterId] ?? [];
-
-    const analytics = getAnalyticsSnapshot({ actions });
-
-    const { goals = [] } = get();
-
-    goals.forEach((goal = {}) => {
-      if (
-        goal.counterId !== counterId ||
-        goal.status === GoalStatusEnum.COMPLETED
-      ) {
-        return;
-      }
-
-      const status = evaluateGoal({
-        goal,
-        counter,
-        analytics,
-      });
-
-      if (status === GoalStatusEnum.COMPLETED) {
-        get().markCompleted(goal.id);
-      }
-    });
+    set((state) => ({
+      goals: [...state.goals, goal],
+    }));
   },
 
-  /* ---------------------------------
-     MARK COMPLETED
-  --------------------------------- */
-  markCompleted: (goalId = '') =>
-    set((state = defaultState) => ({
-      goals: (state.goals ?? []).map((goal = {}) =>
-        goal.id === goalId
-          ? { ...goal, status: GoalStatusEnum.COMPLETED }
-          : goal
+  updateGoal: (goalId = '', updates = {}) => {
+    if (!goalId) return;
+
+    set((state) => ({
+      goals: state.goals.map((g) =>
+        g.id === goalId ? { ...g, ...updates } : g
       ),
-    })),
+    }));
+  },
+
+  deleteGoal: (goalId = '') => {
+    if (!goalId) return;
+
+    set((state) => ({
+      goals: state.goals.filter((g) => g.id !== goalId),
+    }));
+  },
+
+  markCompleted: (goalId = '') => {
+    if (!goalId) return;
+
+    set((state) => ({
+      goals: state.goals.map((g) =>
+        g.id === goalId
+          ? { ...g, status: GoalStatusEnum.COMPLETED }
+          : g
+      ),
+    }));
+  },
 }));

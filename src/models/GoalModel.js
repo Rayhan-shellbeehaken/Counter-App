@@ -1,23 +1,18 @@
-import {
-  GoalTypeEnum,
-  GoalDirectionEnum,
-  GoalPeriodEnum,
-  GoalStatusEnum,
-} from '@/enums/GoalEnums';
+import { GoalTypeEnum, GoalStatusEnum } from '@/enums/GoalEnums';
+
+const defaultParams = {
+  counterId: '',
+  targetValue: 0,
+};
 
 export const createGoal = ({
-  counterId = '',
-  type = GoalTypeEnum.VALUE_TARGET,
-  direction = GoalDirectionEnum.INCREASE,
-  targetValue = 0,
-  period = GoalPeriodEnum.WEEKLY,
+  counterId = defaultParams.counterId,
+  targetValue = defaultParams.targetValue,
 } = {}) => ({
   id: Date.now().toString(),
   counterId,
-  type,
-  direction,
+  type: GoalTypeEnum.VALUE_TARGET,
   targetValue,
-  period,
   status: GoalStatusEnum.ACTIVE,
   createdAt: new Date().toISOString(),
 });

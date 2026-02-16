@@ -3,34 +3,63 @@ import { evaluateGoal } from '@/services/goalService';
 import { GoalStatusEnum } from '@/enums/GoalEnums';
 import { showGoalCompletedNotification } from '@/services/goalNotificationService';
 
-export const evaluateGoalsForCounter = ({
-  counter = null,
-  analytics = null,
-} = {}) => {
-  if (!counter || !counter.id) return;
+const defaultParams = {
+  counter: null,
+  analytics: null,
+};
 
-  const { goals = [], markCompleted } = useGoalStore.getState();
+export const evaluateGoalsForCounter = ({
+  counter = defaultParams.counter,
+  analytics = defaultParams.analytics,
+} = {}) => {
+  if (!counter || !counter.id) {
+    return;
+  }
+
+  const state = useGoalStore.getState();
+  const goals = state?.goals ?? [];
+  const markCompleted = state?.markCompleted ?? (() => {});
 
   goals
-    .filter(
-      (goal) =>
-        goal?.counterId === counter.id &&
-        goal?.status === GoalStatusEnum.ACTIVE
-    )
+    .filter((goal) => isActiveGoalForCounter(goal, counter))
     .forEach((goal) => {
-      const resultStatus = evaluateGoal({
+      handleGoalEvaluation({
         goal,
         counter,
         analytics,
+        markCompleted,
       });
-
-      if (resultStatus === GoalStatusEnum.COMPLETED) {
-        markCompleted(goal.id);
-
-        showGoalCompletedNotification({
-          goal,
-          counter,
-        });
-      }
     });
+};
+
+/* ---------------------------------
+   PURE HELPERS (NO SIDE EFFECTS)
+--------------------------------- */
+
+const isActiveGoalForCounter = (goal = {}, counter = {}) =>
+  goal?.counterId === counter?.id &&
+  goal?.status === GoalStatusEnum.ACTIVE;
+
+const handleGoalEvaluation = ({
+  goal = null,
+  counter = null,
+  analytics = null,
+  markCompleted = () => {},
+} = {}) => {
+  const resultStatus = evaluateGoal({
+    goal,
+    counter,
+    analytics,
+  });
+
+  if (resultStatus !== GoalStatusEnum.COMPLETED) {
+    return;
+  }
+
+  markCompleted(goal.id);
+
+  showGoalCompletedNotification({
+    goal,
+    counter,
+  });
 };
