@@ -1,9 +1,5 @@
-import RootNavigator from "@/navigation/RootNavigator";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
+import RootNavigator from '@/navigation/RootNavigator';
 export default function App() {
-  return (
-    <GestureHandlerRootView>
-      <RootNavigator />
-    </GestureHandlerRootView>
-  );
+  return renderApp();
 }
+const renderApp = () => <RootNavigator />;
