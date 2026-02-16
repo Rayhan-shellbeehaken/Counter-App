@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import CounterHomeScreen from '@/features/counters/screens/CounterHomeScreen';
 import AnalyticsScreen from '@/features/analytics/screens/AnalyticsScreen';
 import GoalsScreen from '@/features/goals/screens/GoalsScreen';
+import SettingsScreen from '@/features/settings/screens/SettingsScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -87,7 +88,7 @@ export default function TabNavigator() {
 
       <Tab.Screen
         name={TabOption.SETTINGS}
-        component={GoalsScreen} // placeholder for now
+        component={SettingsScreen} // placeholder for now
       />
     </Tab.Navigator>
   );
