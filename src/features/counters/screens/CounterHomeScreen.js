@@ -1,97 +1,97 @@
-import { View, FlatList, TouchableOpacity, Text } from 'react-native';
-import { useState } from 'react';
-import { createCounter, CounterCategoryEnum } from '@/features/counters/model';
-import { useCounterStore } from '@/store/counterStore';
-import CounterCard from '@/features/counters/components/CounterCard';
-import CounterFormModal from '@/features/counters/components/CounterFormModal';
+import { View, FlatList, TouchableOpacity, Text } from "react-native";
+import { useState } from "react";
+
+import { createCounter, CounterCategoryEnum } from "@/features/counters/model";
+import { useCounterStore } from "@/store/counterStore";
+import CounterCard from "@/features/counters/components/CounterCard";
+import CounterFormModal from "@/features/counters/components/CounterFormModal";
+import { useTheme } from "@/hooks/useTheme";
 
 const defaultProps = {
   counters: [],
   selectedCategory: null,
 };
 
- 
 export default function CounterHomeScreen() {
-  const { 
+  const theme = useTheme();
+
+  const {
     counters = defaultProps.counters,
     selectedCategory = defaultProps.selectedCategory,
-    setSelectedCategory, 
-    getCategories, 
-    deleteCounter 
+    setSelectedCategory,
+    getCategories,
+    deleteCounter,
+    createCounter: addCounter,
   } = useCounterStore();
 
   const [showForm, setShowForm] = useState(false);
 
-  const categories = getCategories();
-  const currentCategory = selectedCategory || categories[0] || CounterCategoryEnum.GENERAL;
-  const filteredCounters = counters.filter((c) => c.category === currentCategory);
+  const categories = getCategories() ?? [];
+  const currentCategory =
+    selectedCategory || categories[0] || CounterCategoryEnum.GENERAL;
 
-  const handleCreateCounter = (formData) => {
-    const counter = createCounter(formData);
-    useCounterStore.getState().createCounter(counter);
-    setShowForm(false);
-  };
+  const filteredCounters =
+    counters.filter((c) => c.category === currentCategory) ?? [];
 
-  const handleShowForm = () => {
-    setShowForm(true);
-  };
-
-  const handleHideForm = () => {
-    setShowForm(false);
-  };
-
-  const handleDeleteCounter = (id) => {
-    deleteCounter(id);
-  };
-
-  const handleSelectCategory = (category) => {
-    setSelectedCategory(category);
-  };
-
-  return (
-    <View style={{ flex: 1, paddingTop: 50 }}>
-      {renderAddCounterButton(handleShowForm)}
-      {renderCategoryFilter(categories, currentCategory, handleSelectCategory)}
-      {renderCountersList(filteredCounters, handleDeleteCounter)}
-      <CounterFormModal
-        visible={showForm}
-        onClose={handleHideForm}
-        onSubmit={handleCreateCounter}
-      />
-    </View>
+  return renderCounterHome(
+    theme,
+    filteredCounters,
+    categories,
+    currentCategory,
+    showForm,
+    setShowForm,
+    setSelectedCategory,
+    deleteCounter,
+    addCounter,
   );
 }
 
- 
-const renderAddCounterButton = (onPress) => (
-  <View style={{ paddingHorizontal: 10, marginBottom: 10 , marginTop:50}}>
-    <TouchableOpacity
-      onPress={onPress}
-      style={getAddButtonStyle()}
-    >
-      <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>
-        + Add New Counter
-      </Text>
+const renderCounterHome = (
+  theme,
+  counters,
+  categories,
+  currentCategory,
+  showForm,
+  setShowForm,
+  setSelectedCategory,
+  deleteCounter,
+  addCounter,
+) => (
+  <View style={getContainerStyle(theme)}>
+    {renderAddCounterButton(theme, () => setShowForm(true))}
+    {renderCategoryFilter(
+      theme,
+      categories,
+      currentCategory,
+      setSelectedCategory,
+    )}
+    {renderCountersList(theme, counters, deleteCounter)}
+    {renderCounterForm(showForm, setShowForm, addCounter)}
+  </View>
+);
+
+const renderAddCounterButton = (theme, onPress) => (
+  <View style={getAddButtonContainerStyle()}>
+    <TouchableOpacity onPress={onPress} style={getAddButtonStyle(theme)}>
+      <Text style={getAddButtonTextStyle(theme)}>+ Add New Counter</Text>
     </TouchableOpacity>
   </View>
 );
- 
-const renderCategoryFilter = (categories, selected, onSelect) => {
-  if (categories.length === 0) return null;
 
-  return ( 
-    <View style={{ paddingHorizontal: 10, marginBottom: 10 }}>
-      <Text style={{ fontSize: 12, fontWeight: 'bold', marginBottom: 8, color: '#666' }}>
-        CATEGORIES
-      </Text>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+const renderCategoryFilter = (theme, categories, selected, onSelect) => {
+  if (!categories.length) return null;
+
+  return (
+    <View style={getCategoryContainerStyle()}>
+      <Text style={getCategoryTitleStyle(theme)}>CATEGORIES</Text>
+      <View style={getCategoryRowStyle()}>
         {categories.map((category) => (
           <TouchableOpacity
             key={category}
             onPress={() => onSelect(category)}
-            style={getCategoryTabStyle(selected === category)}
+            style={getCategoryTabStyle(theme, selected === category)}
           >
-            <Text style={getCategoryTabTextStyle(selected === category)}>
+            <Text style={getCategoryTabTextStyle(theme, selected === category)}>
               {category}
             </Text>
           </TouchableOpacity>
@@ -101,82 +101,142 @@ const renderCategoryFilter = (categories, selected, onSelect) => {
   );
 };
 
- 
-const renderCountersList = (counters, onDelete) => {
-  if (counters.length === 0) {
-    return renderEmptyState();
+const renderCountersList = (theme, counters, onDelete) => {
+  if (!counters.length) {
+    return renderEmptyState(theme);
   }
 
   return (
     <FlatList
       data={counters}
       keyExtractor={(item) => item.id}
-      renderItem={({ item }) => (
-        <View>
-          <CounterCard counter={item} />
-          <TouchableOpacity
-            onPress={() => onDelete(item.id)}
-            style={getDeleteButtonStyle()}
-          >
-            <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 12 }}>
-              Delete
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      renderItem={({ item }) => renderCounterItem(theme, item, onDelete)}
     />
   );
 };
 
- 
-const renderEmptyState = () => (
-  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-    <Text style={{ fontSize: 16, color: '#999', marginBottom: 16 }}>
-      No counters yet
-    </Text>
-    <TouchableOpacity style={getEmptyStateButtonStyle()}>
-      <Text style={{ fontWeight: 'bold' }}>Create one now</Text>
+const renderCounterItem = (theme, counter, onDelete) => (
+  <View>
+    <CounterCard counter={counter} />
+    <TouchableOpacity
+      onPress={() => onDelete(counter.id)}
+      style={getDeleteButtonStyle(theme)}
+    >
+      <Text style={getDeleteButtonTextStyle()}>Delete</Text>
     </TouchableOpacity>
   </View>
 );
 
- 
-const getAddButtonStyle = () => ({
-  paddingVertical: 12,
-  backgroundColor: '#000',
-  borderRadius: 8,
-  alignItems: 'center',
+const renderCounterForm = (visible, setShowForm, addCounter) => (
+  <CounterFormModal
+    visible={visible}
+    onClose={() => setShowForm(false)}
+    onSubmit={(formData) => {
+      addCounter(createCounter(formData));
+      setShowForm(false);
+    }}
+  />
+);
+
+const renderEmptyState = (theme) => (
+  <View style={getEmptyStateStyle()}>
+    <Text style={getEmptyStateTextStyle(theme)}>No counters yet</Text>
+    <TouchableOpacity style={getEmptyStateButtonStyle(theme)}>
+      <Text style={getEmptyStateButtonTextStyle(theme)}>Create one now</Text>
+    </TouchableOpacity>
+  </View>
+);
+
+const getContainerStyle = (theme) => ({
+  flex: 1,
+  paddingTop: 50,
+  backgroundColor: theme.background,
 });
 
- 
-const getCategoryTabStyle = (isSelected) => ({
+const getAddButtonContainerStyle = () => ({
+  paddingHorizontal: 10,
+  marginBottom: 10,
+});
+
+const getAddButtonStyle = (theme) => ({
+  paddingVertical: 12,
+  backgroundColor: theme.text,
+  borderRadius: 8,
+  alignItems: "center",
+});
+
+const getAddButtonTextStyle = (theme) => ({
+  color: theme.background,
+  fontWeight: "bold",
+  fontSize: 16,
+});
+
+const getCategoryContainerStyle = () => ({
+  paddingHorizontal: 10,
+  marginBottom: 10,
+});
+
+const getCategoryTitleStyle = (theme) => ({
+  fontSize: 12,
+  fontWeight: "bold",
+  marginBottom: 8,
+  color: theme.text,
+});
+
+const getCategoryRowStyle = () => ({
+  flexDirection: "row",
+  flexWrap: "wrap",
+  gap: 6,
+});
+
+const getCategoryTabStyle = (theme, isSelected) => ({
   paddingVertical: 6,
   paddingHorizontal: 12,
   borderRadius: 16,
-  backgroundColor: isSelected ? '#000' : '#e8e8e8',
+  backgroundColor: isSelected ? theme.text : theme.card,
 });
 
- 
-const getCategoryTabTextStyle = (isSelected) => ({
-  color: isSelected ? '#fff' : '#000',
-  fontWeight: 'bold',
+const getCategoryTabTextStyle = (theme, isSelected) => ({
+  color: isSelected ? theme.background : theme.text,
+  fontWeight: "bold",
   fontSize: 12,
 });
 
- 
-const getDeleteButtonStyle = () => ({
+const getDeleteButtonStyle = (theme) => ({
   marginHorizontal: 10,
   marginBottom: 5,
   padding: 8,
-  backgroundColor: '#ff6b6b',
+  backgroundColor: "#ff6b6b",
   borderRadius: 5,
-  alignItems: 'center',
+  alignItems: "center",
 });
 
- 
-const getEmptyStateButtonStyle = () => ({
+const getDeleteButtonTextStyle = () => ({
+  color: "#fff",
+  fontWeight: "bold",
+  fontSize: 12,
+});
+
+const getEmptyStateStyle = () => ({
+  flex: 1,
+  justifyContent: "center",
+  alignItems: "center",
+});
+
+const getEmptyStateTextStyle = (theme) => ({
+  fontSize: 16,
+  color: theme.text,
+  marginBottom: 16,
+});
+
+const getEmptyStateButtonStyle = (theme) => ({
   paddingVertical: 10,
   paddingHorizontal: 20,
-  backgroundColor: '#e8e8e8',
+  backgroundColor: theme.card,
   borderRadius: 6,
+});
+
+const getEmptyStateButtonTextStyle = (theme) => ({
+  color: theme.text,
+  fontWeight: "bold",
 });

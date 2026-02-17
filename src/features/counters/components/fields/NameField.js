@@ -1,57 +1,84 @@
-// src/features/counters/components/fields/NameField.js
-
 import { View, Text, TextInput } from "react-native";
 import { Controller } from "react-hook-form";
 
-const noop = () => {};
+import { useTheme } from "@/hooks/useTheme";
+
+const defaultProps = {
+  control: null,
+  error: "",
+};
 
 export default function NameField({
-  control = null, // defensive default
-  error = "", // defensive default
-}) {
-  return (
-    <Controller
-      control={control}
-      name="name"
-      rules={{
-        required: "Counter name is required",
-      
-      }}
-      render={({ field }) => (
-        <View style={container}>
-          <Text style={label}>Counter Name</Text>
+  control = defaultProps.control,
+  error = defaultProps.error,
+} = {}) {
+  const theme = useTheme();
 
-          <TextInput
-            value={field.value ?? ""} // ✅ critical
-            onChangeText={field.onChange}
-            placeholder="e.g. Water Intake"
-            style={input}
-          />
-
-          {error ? <Text style={errorText}>{error}</Text> : null}
-        </View>
-      )}
-    />
-  );
+  return renderNameField({
+    control,
+    error,
+    theme,
+  });
 }
 
-/* ---------- styles ---------- */
+const renderNameField = ({ control, error, theme }) => (
+  <Controller
+    control={control}
+    name="name"
+    rules={{
+      required: "Counter name is required",
+    }}
+    render={({ field }) =>
+      renderFieldContent({
+        field,
+        error,
+        theme,
+      })
+    }
+  />
+);
 
-const container = { marginBottom: 16 };
+const renderFieldContent = ({ field, error, theme }) => (
+  <View style={getContainerStyle()}>
+    <Text style={getLabelStyle(theme)}>Counter Name*</Text>
 
-const label = {
+    <TextInput
+      value={field.value ?? ""}
+      onChangeText={field.onChange}
+      placeholder="e.g. Water Intake"
+      placeholderTextColor={theme.placeholder}
+      style={getInputStyle(theme)}
+    />
+
+    {error ? renderErrorText(error, theme) : null}
+  </View>
+);
+
+const renderErrorText = (error, theme) => (
+  <Text style={getErrorTextStyle(theme)}>{error}</Text>
+);
+
+const getContainerStyle = () => ({
+  marginBottom: 16,
+});
+
+const getLabelStyle = (theme) => ({
   fontWeight: "bold",
   marginBottom: 6,
-};
+  color: theme.text,
+});
 
-const input = {
+const getInputStyle = (theme) => ({
   borderWidth: 1,
-  borderColor: "#ddd",
+  borderColor: theme.border,
   borderRadius: 8,
   padding: 10,
-};
+  color: theme.text,
+  backgroundColor: theme.card,
+  borderColor: theme.text,
+});
 
-const errorText = {
-  color: "red",
+const getErrorTextStyle = (theme) => ({
+  color: theme.danger,
   marginTop: 4,
-};
+});

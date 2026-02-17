@@ -2,6 +2,7 @@
 
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '@react-navigation/native';
 
 import CounterHomeScreen from '@/features/counters/screens/CounterHomeScreen';
 import AnalyticsScreen from '@/features/analytics/screens/AnalyticsScreen';
@@ -10,7 +11,6 @@ import SettingsScreen from '@/features/settings/screens/SettingsScreen';
 
 const Tab = createBottomTabNavigator();
 
- 
 export const TabOption = Object.freeze({
   COUNTER: 'Counters',
   ANALYTICS: 'Analytics',
@@ -18,7 +18,6 @@ export const TabOption = Object.freeze({
   SETTINGS: 'Settings',
 });
 
- 
 const defaultProps = {
   routeName: TabOption.COUNTER,
   focused: false,
@@ -26,7 +25,6 @@ const defaultProps = {
   size: 24,
 };
 
- 
 const getTabIcon = (
   routeName = defaultProps.routeName,
   focused = defaultProps.focused
@@ -44,33 +42,44 @@ const getTabIcon = (
       return 'ellipse-outline';
   }
 };
- 
-const renderTabIcon = (
-  routeName,
-  focused,
-  color,
-  size
-) => {
+
+const renderTabIcon = (routeName, focused, color, size) => {
   const iconName = getTabIcon(routeName, focused);
   return <Ionicons name={iconName} size={size} color={color} />;
 };
- 
-const createScreenOptions = ({ route = {} } = {}) => ({
+
+const createScreenOptions = ({
+  route = {},
+  colors = {},
+} = {}) => ({
   tabBarIcon: ({
     focused = defaultProps.focused,
     color = defaultProps.color,
     size = defaultProps.size,
   }) => renderTabIcon(route.name, focused, color, size),
 
-  tabBarActiveTintColor: '#000',
+  tabBarStyle: {
+    backgroundColor: colors.card,     // ✅ makes tab bar visible in dark mode
+    borderTopColor: colors.border,
+  },
+
+  tabBarActiveTintColor: colors.primary,
   tabBarInactiveTintColor: 'gray',
   headerShown: false,
 });
 
- 
 export default function TabNavigator() {
+  const { colors } = useTheme(); // ✅ ADDITION
+
   return (
-    <Tab.Navigator screenOptions={createScreenOptions}>
+    <Tab.Navigator
+      screenOptions={(props) =>
+        createScreenOptions({
+          ...props,
+          colors, // ✅ ADDITION
+        })
+      }
+    >
       <Tab.Screen
         name={TabOption.COUNTER}
         component={CounterHomeScreen}
@@ -83,12 +92,12 @@ export default function TabNavigator() {
 
       <Tab.Screen
         name={TabOption.GOALS}
-        component={GoalsScreen} // placeholder for now
+        component={GoalsScreen}
       />
 
       <Tab.Screen
         name={TabOption.SETTINGS}
-        component={SettingsScreen} // placeholder for now
+        component={SettingsScreen}
       />
     </Tab.Navigator>
   );

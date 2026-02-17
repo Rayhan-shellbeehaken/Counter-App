@@ -1,25 +1,33 @@
-import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import React from "react";
+import { View, Text, TouchableOpacity } from "react-native";
 
-import GoalInfo from '@/features/goals/components/GoalInfo';
-import GoalEditor from '@/features/goals/components/GoalEditor';
+import GoalInfo from "@/features/goals/components/GoalInfo";
+import GoalEditor from "@/features/goals/components/GoalEditor";
+import { useTheme } from "@/hooks/useTheme";
 
 const defaultProps = {
   counter: {},
   goal: null,
   isEditing: false,
+  targetValue: "",
+  onEdit: () => {},
+  onSave: () => {},
+  onDelete: () => {},
+  onTargetChange: () => {},
 };
 
 export default function CounterGoalCard({
   counter = defaultProps.counter,
   goal = defaultProps.goal,
   isEditing = defaultProps.isEditing,
-  targetValue = '',
-  onEdit = () => {},
-  onSave = () => {},
-  onDelete = () => {},
-  onTargetChange = () => {},
+  targetValue = defaultProps.targetValue,
+  onEdit = defaultProps.onEdit,
+  onSave = defaultProps.onSave,
+  onDelete = defaultProps.onDelete,
+  onTargetChange = defaultProps.onTargetChange,
 }) {
+  const theme = useTheme();
+
   return renderCounterGoalCard({
     counter,
     goal,
@@ -29,6 +37,7 @@ export default function CounterGoalCard({
     onSave,
     onDelete,
     onTargetChange,
+    theme,
   });
 }
 
@@ -41,9 +50,10 @@ const renderCounterGoalCard = ({
   onSave,
   onDelete,
   onTargetChange,
+  theme,
 }) => (
-  <View style={styles.card}>
-    <Text style={styles.name}>
+  <View style={getCardStyle(theme)}>
+    <Text style={getNameStyle(theme)}>
       {counter.icon} {counter.name}
     </Text>
 
@@ -53,7 +63,7 @@ const renderCounterGoalCard = ({
 
     {!goal && !isEditing && (
       <TouchableOpacity onPress={onEdit}>
-        <Text style={styles.setGoal}>Set Goal</Text>
+        <Text style={getSetGoalStyle(theme)}>Set Goal</Text>
       </TouchableOpacity>
     )}
 
@@ -67,22 +77,23 @@ const renderCounterGoalCard = ({
   </View>
 );
 
-const styles = {
-  card: {
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 10,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#eee',
-  },
-  name: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  setGoal: {
-    color: '#007AFF',
-    fontWeight: '600',
-  },
-};
+const getCardStyle = (theme) => ({
+  backgroundColor: theme.card,
+  padding: 16,
+  borderRadius: 10,
+  marginBottom: 12,
+  borderWidth: 1,
+  borderColor: theme.border ?? theme.card,
+});
+
+const getNameStyle = (theme) => ({
+  fontSize: 16,
+  fontWeight: "bold",
+  marginBottom: 8,
+  color: theme.text,
+});
+
+const getSetGoalStyle = (theme) => ({
+  color: theme.primary ?? "#007AFF",
+  fontWeight: "600",
+});

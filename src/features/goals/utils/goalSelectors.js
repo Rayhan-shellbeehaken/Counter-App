@@ -9,3 +9,15 @@ export const getActiveGoalForCounter = ({
       g.counterId === counterId &&
       g.status === GoalStatusEnum.ACTIVE
   ) ?? null;
+  
+export const mapCountersWithGoals = ({
+  counters = [],
+  goals = [],
+}) =>
+  counters.map((counter) => ({
+    counter,
+    goal: getActiveGoalForCounter({
+      goals,
+      counterId: counter.id,
+    }),
+  }));

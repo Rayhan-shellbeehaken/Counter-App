@@ -1,58 +1,86 @@
 import { View, Text } from "react-native";
 import { Controller } from "react-hook-form";
+
 import { CounterCategoryEnum } from "@/enums/CounterEnums";
 import CategoryOption from "@/features/counters/components/fields/CategoryOption";
+import { useTheme } from "@/hooks/useTheme";
 
-const CATEGORIES = Object.values(CounterCategoryEnum);
-const noop = () => {};
+const defaultProps = {
+  control: null,
+};
 
-export default function CategoryField({ control = null }) {
-  const items = CATEGORIES.map((category) => ({
-    key: category,
-    label: category,
-  }));
+const DEFAULT_CATEGORIES = Object.values(CounterCategoryEnum);
 
-  return (
-    <Controller
-      control={control}
-      name="category"
-      render={({ field }) => (
-        <View style={{ marginBottom: 8 }}>
-          <Text style={label}>Category</Text>
-          <View style={row}>
-            <CategoryList
-              items={items}
-              selected={field.value}
-              onSelect={field.onChange}
-            />
-          </View>
-        </View>
-      )}
-    />
-  );
+export default function CategoryField({ control = defaultProps.control } = {}) {
+  const theme = useTheme();
+
+  return renderCategoryField({
+    control,
+    theme,
+  });
 }
 
-function CategoryList({ items = [], selected = "", onSelect = noop }) {
-  return (
-    <>
-      {items.map((item) => (
-        <CategoryOption
-          key={item.key}
-          label={item.label}
-          active={item.label === selected}
-          onPress={onSelect}
-        />
-      ))}
-    </>
+const renderCategoryField = ({ control, theme }) => (
+  <Controller
+    control={control}
+    name="category"
+    render={({ field }) =>
+      renderFieldContent({
+        value: field.value,
+        onChange: field.onChange,
+        theme,
+      })
+    }
+  />
+);
+
+const renderFieldContent = ({ value, onChange, theme }) => (
+  <View style={getContainerStyle()}>
+    <Text style={getLabelStyle(theme)}>Category</Text>
+
+    <View style={getRowStyle()}>
+      <CategoryList
+        items={DEFAULT_CATEGORIES}
+        selected={value}
+        onSelect={onChange}
+        theme={theme}
+      />
+    </View>
+  </View>
+);
+
+const CategoryList = ({
+  items = [],
+  selected = "",
+  onSelect = () => {},
+  theme,
+}) =>
+  items.map((category) =>
+    renderCategoryOption(category, selected, onSelect, theme),
   );
-}
-const label = {
-  fontWeight: 'bold',
+
+const renderCategoryOption = (category, selected, onSelect, theme) => (
+  <CategoryOption
+    key={category}
+    label={category}
+    active={category === selected}
+    onPress={onSelect}
+    theme={theme}
+  />
+);
+
+const getContainerStyle = () => ({
   marginBottom: 6,
-};
+});
 
-const row = {
-  flexDirection: 'row',
-  flexWrap: 'wrap',
+const getLabelStyle = (theme) => ({
+  fontWeight: "bold",
+  marginBottom: 6,
+  color: theme.text,
+});
+
+const getRowStyle = () => ({
+  flexDirection: "row",
+  flexWrap: "wrap",
   gap: 8,
-};
+});

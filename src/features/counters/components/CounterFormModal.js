@@ -9,6 +9,7 @@ import MaxValueField from "@/features/counters/components/fields/MaxValueField";
 import CounterFormFooter from "@/features/counters/components/CounterFormFooter";
 
 import { useCounterForm } from "@/hooks/useCounterForm";
+import { useTheme } from "@/hooks/useTheme";
 
 const noop = () => {};
 
@@ -17,13 +18,13 @@ export default function CounterFormModal({
   onClose = noop,
   onSubmit = noop,
 }) {
-   
   const { control, submit } = useCounterForm({ onSubmit });
+  const theme = useTheme();
 
   return (
     <Modal visible={visible} animationType="slide">
-      <View style={{ flex: 1 }}>
-        <ScrollView style={{ paddingTop: 50, paddingHorizontal: 16 }}>
+      <View style={getContainerStyle(theme)}>
+        <ScrollView style={getScrollStyle(theme)}>
           <NameField control={control} />
           <IconField control={control} />
           <CategoryField control={control} />
@@ -32,11 +33,19 @@ export default function CounterFormModal({
           <MaxValueField control={control} />
         </ScrollView>
 
-        <CounterFormFooter
-          onCancel={onClose}
-          onSubmit={submit}
-        />
+        <CounterFormFooter onCancel={onClose} onSubmit={submit} />
       </View>
     </Modal>
   );
 }
+
+const getContainerStyle = (theme = {}) => ({
+  flex: 1,
+  backgroundColor: theme.background,
+});
+
+const getScrollStyle = (theme = {}) => ({
+  paddingTop: 45,
+  paddingHorizontal: 16,
+  backgroundColor: theme.background,
+});

@@ -1,44 +1,95 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 
+import { useTheme } from '@/hooks/useTheme';
+
+/* ---------------------------------
+   DEFAULTS
+--------------------------------- */
+
+const defaultProps = {
+  goal: {},
+  onEdit: () => {},
+  onDelete: () => {},
+};
+
+/* ---------------------------------
+   COMPONENT
+--------------------------------- */
+
 export default function GoalInfo({
-  goal = {},
-  onEdit = () => {},
-  onDelete = () => {},
+  goal = defaultProps.goal,
+  onEdit = defaultProps.onEdit,
+  onDelete = defaultProps.onDelete,
 }) {
-  return renderGoalInfo({ goal, onEdit, onDelete });
+  const theme = useTheme();
+
+  return renderGoalInfo({
+    goal,
+    onEdit,
+    onDelete,
+    theme,
+  });
 }
 
-const renderGoalInfo = ({ goal, onEdit, onDelete }) => (
-  <View style={styles.box}>
-    <Text style={styles.text}>🎯 Target: {goal.targetValue}</Text>
+/* ---------------------------------
+   RENDER
+--------------------------------- */
 
-    <View style={styles.actions}>
+const renderGoalInfo = ({
+  goal,
+  onEdit,
+  onDelete,
+  theme,
+}) => (
+  <View style={getBoxStyle(theme)}>
+    <Text style={getTextStyle(theme)}>
+      🎯 Target: {goal?.targetValue ?? 0}
+    </Text>
+
+    <View style={getActionsStyle()}>
       <TouchableOpacity onPress={onEdit}>
-        <Text style={styles.edit}>Edit</Text>
+        <Text style={getEditStyle(theme)}>
+          Edit
+        </Text>
       </TouchableOpacity>
+
       <TouchableOpacity onPress={onDelete}>
-        <Text style={styles.delete}>Delete</Text>
+        <Text style={getDeleteStyle(theme)}>
+          Delete
+        </Text>
       </TouchableOpacity>
     </View>
   </View>
 );
 
-const styles = {
-  box: {
-    backgroundColor: '#F0F8FF',
-    padding: 10,
-    borderRadius: 8,
-  },
-  text: {
-    fontWeight: '600',
-    color: '#007AFF',
-  },
-  actions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 6,
-  },
-  edit: { color: '#007AFF' },
-  delete: { color: '#FF3B30' },
-};
+/* ---------------------------------
+   STYLES (THEME-AWARE)
+--------------------------------- */
+
+const getBoxStyle = (theme) => ({
+  backgroundColor: theme.card,
+  padding: 10,
+  borderRadius: 8,
+});
+
+const getTextStyle = (theme) => ({
+  fontWeight: '600',
+  color: theme.text,
+});
+
+const getActionsStyle = () => ({
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  marginTop: 6,
+});
+
+const getEditStyle = (theme) => ({
+  color: theme.text,
+  fontWeight: '500',
+});
+
+const getDeleteStyle = (theme) => ({
+  color: theme.danger ?? '#FF3B30',
+  fontWeight: '500',
+});

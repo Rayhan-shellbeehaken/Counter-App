@@ -1,35 +1,34 @@
-import { DefaultTheme, DarkTheme } from '@react-navigation/native';
+import { DarkTheme, DefaultTheme } from '@react-navigation/native';
+import { ThemeModeEnum } from '@/enums/ThemeEnums';
 
-const defaultFonts = DefaultTheme.fonts;
-
-export const getNavigationTheme = (mode = 'light') => {
+export const getNavigationTheme = (
+  mode = ThemeModeEnum.LIGHT
+) => {
   switch (mode) {
-    case 'dark':
+    case ThemeModeEnum.DARK:
       return {
         ...DarkTheme,
-        fonts: defaultFonts, // ✅ REQUIRED
         colors: {
           ...DarkTheme.colors,
-          background: '#000',
-          card: '#111',
-          text: '#fff',
-          border: '#222',
-          primary: '#fff',
+          background: '#000000',
+          card: '#050505',         
+          text: '#000000',        
+          border: '#E5E5E5',
+          primary: '#e2e8ee',
         },
       };
 
-    case 'light':
+    case ThemeModeEnum.LIGHT:
     default:
       return {
         ...DefaultTheme,
-        fonts: defaultFonts, // ✅ REQUIRED
         colors: {
           ...DefaultTheme.colors,
-          background: '#fff',
-          card: '#fff',
-          text: '#000',
-          border: '#eee',
-          primary: '#000',
+          background: '#FFFFFF',
+          card: '#FFFFFF',
+          text: '#000000',
+          border: '#E5E5E5',
+          primary: '#0b0c0c',
         },
       };
   }

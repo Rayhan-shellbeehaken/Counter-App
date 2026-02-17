@@ -1,10 +1,10 @@
-import { useThemeStore } from '@/store/themeStore';
-import { ThemeModeEnum } from '@/enums/ThemeEnums';
+import { useThemeStore } from "@/store/themeStore";
+import { ThemeModeEnum } from "@/enums/ThemeEnums";
 
 const defaultTheme = {
-  background: '#fff',
-  text: '#000',
-  card: '#f5f5f5',
+  background: "#fff",
+  text: "#000",
+  card: "#f5f5f5",
 };
 
 export const useTheme = () => {
@@ -21,9 +21,9 @@ const getThemeByMode = (mode = ThemeModeEnum.LIGHT) => {
   switch (mode) {
     case ThemeModeEnum.DARK:
       return {
-        background: '#000',
-        text: '#fff',
-        card: '#1c1c1e',
+        background: "#000",
+        text: "#fff",
+        card: "#1c1c1e",
       };
 
     case ThemeModeEnum.LIGHT:
