@@ -3,58 +3,85 @@ import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { useCounterStore } from '@/store/counterStore';
 import { useHistoryStore } from '@/store/historyStore';
 import { TimePeriodEnum } from '@/enums/AnalyticsEnums';
-import { calculateCounterStats, getPeriodLabel, getChartDataPoints } from '@/services/analyticsService';
+import {
+  calculateCounterStats,
+  getPeriodLabel,
+  getChartDataPoints,
+} from '@/services/analyticsService';
+
+/* ---------------------------------
+   DEFAULTS
+--------------------------------- */
 
 const defaultProps = {
   period: TimePeriodEnum.SEVEN_DAYS,
 };
- 
+
+/* ---------------------------------
+   SCREEN
+--------------------------------- */
 
 export default function AnalyticsScreen({
   period = defaultProps.period,
 } = {}) {
   const [selectedPeriod, setSelectedPeriod] = useState(period);
-  const counters = useCounterStore((state) => state.counters);
-  const historyStore = useHistoryStore((state) => state.history);
 
-  const handlePeriodChange = (newPeriod) => {
+  const counters = useCounterStore((state) => state.counters);
+
+  // ✅ CORRECT KEY
+  const historyByCounter = useHistoryStore(
+    (state) => state.historyByCounter
+  );
+
+  const handlePeriodChange = (
+    newPeriod = defaultProps.period
+  ) => {
     setSelectedPeriod(newPeriod);
   };
 
   return renderAnalyticsContent(
     counters,
-    historyStore,
+    historyByCounter ?? {},
     selectedPeriod,
     handlePeriodChange
   );
 }
 
-/**
- * Render main analytics content
- */
-const renderAnalyticsContent = (counters, history, selectedPeriod, onPeriodChange) => (
+/* ---------------------------------
+   RENDER FUNCTIONS
+--------------------------------- */
+
+const renderAnalyticsContent = (
+  counters = [],
+  historyByCounter = {},
+  selectedPeriod,
+  onPeriodChange
+) => (
   <ScrollView style={getContainerStyle()}>
     {renderHeader()}
     {renderPeriodSelector(selectedPeriod, onPeriodChange)}
-    {renderCounterStats(counters, history, selectedPeriod)}
+    {renderCounterStats(
+      counters,
+      historyByCounter,
+      selectedPeriod
+    )}
     <View style={{ height: 20 }} />
   </ScrollView>
 );
 
-/**
- * Render header
- */
 const renderHeader = () => (
   <View style={getHeaderStyle()}>
     <Text style={getTitleStyle()}>Analytics</Text>
-    <Text style={getSubtitleStyle()}>Track your counter progress</Text>
+    <Text style={getSubtitleStyle()}>
+      Track your counter progress
+    </Text>
   </View>
 );
 
-/**
- * Render period selector buttons
- */
-const renderPeriodSelector = (selectedPeriod, onPeriodChange) => (
+const renderPeriodSelector = (
+  selectedPeriod,
+  onPeriodChange
+) => (
   <View style={getPeriodSelectorStyle()}>
     {renderPeriodButton(
       TimePeriodEnum.SEVEN_DAYS,
@@ -74,33 +101,47 @@ const renderPeriodSelector = (selectedPeriod, onPeriodChange) => (
   </View>
 );
 
-/**
- * Render individual period button
- */
-const renderPeriodButton = (period, selectedPeriod, onPeriodChange) => (
+const renderPeriodButton = (
+  period,
+  selectedPeriod,
+  onPeriodChange
+) => (
   <TouchableOpacity
     onPress={() => onPeriodChange(period)}
-    style={getPeriodButtonStyle(period === selectedPeriod)}
+    style={getPeriodButtonStyle(
+      period === selectedPeriod
+    )}
   >
-    <Text style={getPeriodButtonTextStyle(period === selectedPeriod)}>
+    <Text
+      style={getPeriodButtonTextStyle(
+        period === selectedPeriod
+      )}
+    >
       {getPeriodLabel(period)}
     </Text>
   </TouchableOpacity>
 );
 
-/**
- * Render counter statistics
- */
-const renderCounterStats = (counters, history, selectedPeriod) => {
-  if (!counters || counters.length === 0) {
+const renderCounterStats = (
+  counters = [],
+  historyByCounter = {},
+  selectedPeriod
+) => {
+  if (!counters.length) {
     return renderEmptyState();
   }
 
   return (
     <View style={getStatsContainerStyle()}>
       {counters.map((counter) => {
-        const counterHistoryData = history[counter.id];
-        const actions = counterHistoryData?.past || [];
+        const counterHistory =
+          historyByCounter[counter.id] ?? {
+            past: [],
+          };
+
+        const actions =
+          counterHistory.past ?? [];
+
         return renderCounterStatCard(
           counter,
           actions,
@@ -111,58 +152,82 @@ const renderCounterStats = (counters, history, selectedPeriod) => {
   );
 };
 
-/**
- * Render individual counter stat card
- */
-const renderCounterStatCard = (counter, actions, selectedPeriod) => {
-  const stats = calculateCounterStats(counter, actions, selectedPeriod);
+const renderCounterStatCard = (
+  counter,
+  actions,
+  selectedPeriod
+) => {
+  const stats = calculateCounterStats(
+    counter,
+    actions,
+    selectedPeriod
+  );
 
   return (
     <View key={counter.id} style={getStatCardStyle()}>
       {renderCounterNameAndIcon(counter)}
-      {renderStatRow('Current Value', `${stats.currentValue}`)}
-      {renderStatRow('Total Changes', `${stats.totalChanges}`)}
-      {renderStatRow('Avg Daily', `${stats.avgDaily}`)}
+      {renderStatRow(
+        'Current Value',
+        `${stats.currentValue}`
+      )}
+      {renderStatRow(
+        'Total Changes',
+        `${stats.totalChanges}`
+      )}
+      {renderStatRow(
+        'Avg Daily',
+        `${stats.avgDaily}`
+      )}
       {renderSimpleChart(actions, selectedPeriod)}
     </View>
   );
 };
 
-/**
- * Render counter name and icon
- */
 const renderCounterNameAndIcon = (counter) => (
   <View style={getNameRowStyle()}>
-    <Text style={getCounterNameStyle()}>{counter.icon}</Text>
-    <Text style={getCounterLabelStyle()}>{counter.name}</Text>
+    <Text style={getCounterNameStyle()}>
+      {counter.icon}
+    </Text>
+    <Text style={getCounterLabelStyle()}>
+      {counter.name}
+    </Text>
   </View>
 );
 
-/**
- * Render stat row (label + value)
- */
 const renderStatRow = (label, value) => (
   <View style={getStatRowStyle()}>
-    <Text style={getStatLabelStyle()}>{label}:</Text>
-    <Text style={getStatValueStyle()}>{value}</Text>
+    <Text style={getStatLabelStyle()}>
+      {label}:
+    </Text>
+    <Text style={getStatValueStyle()}>
+      {value}
+    </Text>
   </View>
 );
 
-/**
- * Render simple bar chart
- */
-const renderSimpleChart = (actions, selectedPeriod) => {
-  const dataPoints = getChartDataPoints(actions, selectedPeriod);
+const renderSimpleChart = (
+  actions = [],
+  selectedPeriod
+) => {
+  const dataPoints = getChartDataPoints(
+    actions,
+    selectedPeriod
+  );
 
-  if (dataPoints.length === 0) {
+  if (!dataPoints.length) {
     return renderNoChartData();
   }
 
-  const maxValue = Math.max(...dataPoints.map((d) => d.value), 1);
+  const maxValue = Math.max(
+    ...dataPoints.map((d) => d.value),
+    1
+  );
 
   return (
     <View style={getChartContainerStyle()}>
-      <Text style={getChartTitleStyle()}>Progress Chart</Text>
+      <Text style={getChartTitleStyle()}>
+        Progress Chart
+      </Text>
       <View style={getBarsContainerStyle()}>
         {dataPoints.slice(-7).map((point, index) =>
           renderBarItem(point, maxValue, index)
@@ -172,24 +237,29 @@ const renderSimpleChart = (actions, selectedPeriod) => {
   );
 };
 
-/**
- * Render individual bar item
- */
-const renderBarItem = (point, maxValue, index) => {
-  const heightPercent = maxValue > 0 ? (point.value / maxValue) * 100 : 0;
+const renderBarItem = (
+  point,
+  maxValue,
+  index
+) => {
+  const heightPercent =
+    maxValue > 0
+      ? (point.value / maxValue) * 100
+      : 0;
 
   return (
     <View key={index} style={getBarItemStyle()}>
       <View style={getBarStyle(heightPercent)} />
-      <Text style={getBarLabelStyle()}>{point.date}</Text>
-      <Text style={getBarValueStyle()}>{point.value}</Text>
+      <Text style={getBarLabelStyle()}>
+        {point.date}
+      </Text>
+      <Text style={getBarValueStyle()}>
+        {point.value}
+      </Text>
     </View>
   );
 };
 
-/**
- * Render empty state
- */
 const renderEmptyState = () => (
   <View style={getEmptyStateStyle()}>
     <Text style={getEmptyStateTextStyle()}>
@@ -198,14 +268,21 @@ const renderEmptyState = () => (
   </View>
 );
 
-/**
- * Render no chart data message
- */
 const renderNoChartData = () => (
   <View style={getNoChartDataStyle()}>
-    <Text style={getNoChartDataTextStyle()}>No activity data yet</Text>
+    <Text style={getNoChartDataTextStyle()}>
+      No activity data yet
+    </Text>
   </View>
 );
+
+
+/* ---------------------------------
+   STYLES (unchanged)
+--------------------------------- */
+
+/* styles remain exactly as you provided */
+
 
 /**
  * STYLES
@@ -214,11 +291,12 @@ const renderNoChartData = () => (
 const getContainerStyle = () => ({
   flex: 1,
   backgroundColor: '#f5f5f5',
+  marginTop:20,
 });
 
 const getHeaderStyle = () => ({
   paddingHorizontal: 16,
-  paddingVertical: 20,
+  paddingVertical: 50,
   backgroundColor: '#fff',
   borderBottomWidth: 1,
   borderBottomColor: '#eee',

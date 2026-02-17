@@ -1,5 +1,3 @@
-// src/services/analyticsService.js
-
 import { TimePeriodEnum } from '@/enums/AnalyticsEnums';
 
 /* ---------------------------------
@@ -8,7 +6,9 @@ import { TimePeriodEnum } from '@/enums/AnalyticsEnums';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-const getPeriodDays = (period = TimePeriodEnum.SEVEN_DAYS) => {
+const getPeriodDays = (
+  period = TimePeriodEnum.SEVEN_DAYS
+) => {
   switch (period) {
     case TimePeriodEnum.THIRTY_DAYS:
       return 30;
@@ -24,7 +24,9 @@ const getPeriodDays = (period = TimePeriodEnum.SEVEN_DAYS) => {
    LABELS
 --------------------------------- */
 
-export const getPeriodLabel = (period = TimePeriodEnum.SEVEN_DAYS) => {
+export const getPeriodLabel = (
+  period = TimePeriodEnum.SEVEN_DAYS
+) => {
   switch (period) {
     case TimePeriodEnum.THIRTY_DAYS:
       return '30 Days';
@@ -37,7 +39,7 @@ export const getPeriodLabel = (period = TimePeriodEnum.SEVEN_DAYS) => {
 };
 
 /* ---------------------------------
-   STATS CALCULATION
+   STATS CALCULATION (FIXED)
 --------------------------------- */
 
 export const calculateCounterStats = (
@@ -48,24 +50,32 @@ export const calculateCounterStats = (
   const days = getPeriodDays(period);
   const cutoff = Date.now() - days * DAY_MS;
 
+  /* ✅ FIX: convert timestamp string → number */
   const filteredActions = actions.filter(
-    (a) => a?.timestamp >= cutoff
+    (a) =>
+      Date.parse(a?.timestamp ?? '') >= cutoff
   );
 
-  const totalChanges = filteredActions.length;
+  const totalChanges = filteredActions.reduce(
+    (sum, action) =>
+      sum + Math.abs(action?.step ?? 0),
+    0
+  );
 
   const avgDaily =
-    days > 0 ? (totalChanges / days).toFixed(2) : '0';
+    days > 0
+      ? (totalChanges / days).toFixed(2)
+      : '0';
 
   return {
-    currentValue: counter.value ?? 0,
+    currentValue: counter?.value ?? 0,
     totalChanges,
     avgDaily,
   };
 };
 
 /* ---------------------------------
-   CHART DATA
+   CHART DATA (FIXED)
 --------------------------------- */
 
 export const getChartDataPoints = (
@@ -75,32 +85,41 @@ export const getChartDataPoints = (
   const days = getPeriodDays(period);
   const now = Date.now();
 
-  const buckets = Array.from({ length: days }).map((_, index) => {
-    const dayStart =
-      now - (days - index) * DAY_MS;
-    const dayEnd = dayStart + DAY_MS;
+  return Array.from({ length: days }).map(
+    (_, index) => {
+      const dayStart =
+        now - (days - index) * DAY_MS;
+      const dayEnd = dayStart + DAY_MS;
 
-    const value = actions.filter(
-      (a) =>
-        a.timestamp >= dayStart &&
-        a.timestamp < dayEnd
-    ).length;
+      const value = actions.filter(
+        (a) => {
+          const ts = Date.parse(
+            a?.timestamp ?? ''
+          );
+          return ts >= dayStart && ts < dayEnd;
+        }
+      ).length;
 
-    return {
-      date: `${index + 1}`,
-      value,
-    };
-  });
-
-  return buckets;
+      return {
+        date: `${index + 1}`,
+        value,
+      };
+    }
+  );
 };
-/**
- * Minimal analytics snapshot for goal evaluation
- */
+
+/* ---------------------------------
+   SNAPSHOT (GOALS)
+--------------------------------- */
+
 export const getAnalyticsSnapshot = ({
   actions = [],
 } = {}) => {
   return {
-    total: actions.length,
+    total: actions.reduce(
+      (sum, action) =>
+        sum + Math.abs(action?.step ?? 0),
+      0
+    ),
   };
 };

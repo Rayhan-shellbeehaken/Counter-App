@@ -2,75 +2,110 @@ import { create } from 'zustand';
 
 const MAX_HISTORY = 10;
 
+/* ---------------------------------
+   DEFAULT STRUCTURE
+--------------------------------- */
+const createEmptyHistory = () => ({
+  past: [],
+  future: [],
+});
+
 export const useHistoryStore = create((set, get) => ({
-  history: {},  
+  /* ---------------------------------
+     STATE
+  --------------------------------- */
+  historyByCounter: {},
 
-  initCounter: (counterId) => {
-    set(state => {
-      if (state.history[counterId]) return state;
+  /* ---------------------------------
+     INIT
+  --------------------------------- */
+  initCounter: (counterId = '') => {
+    if (!counterId) return;
+
+    set((state) => {
+      if (state.historyByCounter[counterId]) return state;
+
       return {
-        history: {
-          ...state.history,
-          [counterId]: { past: [], future: [] }
-        }
+        historyByCounter: {
+          ...state.historyByCounter,
+          [counterId]: createEmptyHistory(),
+        },
       };
     });
   },
 
-  pushAction: (counterId, action) => {
-    set(state => {
-      const counterHistory = state.history[counterId] || { past: [], future: [] };
-      const newPast = [...counterHistory.past, action].slice(-MAX_HISTORY);
+  /* ---------------------------------
+     PUSH ACTION (SOURCE OF TRUTH)
+  --------------------------------- */
+  pushAction: (counterId = '', action = null) => {
+    if (!counterId || !action) return;
+
+    set((state) => {
+      const counterHistory =
+        state.historyByCounter[counterId] ?? createEmptyHistory();
 
       return {
-        history: {
-          ...state.history,
+        historyByCounter: {
+          ...state.historyByCounter,
           [counterId]: {
-            past: newPast,
-            future: []
-          }
-        }
+            past: [...counterHistory.past, action].slice(-MAX_HISTORY),
+            future: [],
+          },
+        },
       };
     });
   },
 
-  undo: (counterId) => {
-    const { history } = get();
-    const counterHistory = history[counterId];
-    if (!counterHistory || counterHistory.past.length === 0) return null;
+  /* ---------------------------------
+     UNDO
+  --------------------------------- */
+  undo: (counterId = '') => {
+    if (!counterId) return null;
 
-    const lastAction = counterHistory.past[counterHistory.past.length - 1];
+    const counterHistory =
+      get().historyByCounter[counterId] ?? createEmptyHistory();
 
-    set(state => ({
-      history: {
-        ...state.history,
+    if (counterHistory.past.length === 0) return null;
+
+    const lastAction =
+      counterHistory.past[counterHistory.past.length - 1];
+
+    set((state) => ({
+      historyByCounter: {
+        ...state.historyByCounter,
         [counterId]: {
           past: counterHistory.past.slice(0, -1),
-          future: [lastAction, ...counterHistory.future]
-        }
-      }
+          future: [lastAction, ...counterHistory.future],
+        },
+      },
     }));
 
     return lastAction;
   },
 
-  redo: (counterId) => {
-    const { history } = get();
-    const counterHistory = history[counterId];
-    if (!counterHistory || counterHistory.future.length === 0) return null;
+  /* ---------------------------------
+     REDO
+  --------------------------------- */
+  redo: (counterId = '') => {
+    if (!counterId) return null;
+
+    const counterHistory =
+      get().historyByCounter[counterId] ?? createEmptyHistory();
+
+    if (counterHistory.future.length === 0) return null;
 
     const nextAction = counterHistory.future[0];
 
-    set(state => ({
-      history: {
-        ...state.history,
+    set((state) => ({
+      historyByCounter: {
+        ...state.historyByCounter,
         [counterId]: {
           past: [...counterHistory.past, nextAction].slice(-MAX_HISTORY),
-          future: counterHistory.future.slice(1)
-        }
-      }
+          future: counterHistory.future.slice(1),
+        },
+      },
     }));
 
     return nextAction;
-  }
+  },
 }));

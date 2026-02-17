@@ -9,18 +9,34 @@ import {
   calculateStreak,
 } from '@/services/analyticsService';
 
+/* ---------------------------------
+   DEFENSIVE DEFAULTS
+--------------------------------- */
+const defaultProps = {
+  counterId: '',
+  period: AnalyticsPeriodEnum.WEEK,
+};
+
+/* ---------------------------------
+   ANALYTICS HOOK
+--------------------------------- */
 export const useAnalytics = ({
-  counterId = '',
-  period = AnalyticsPeriodEnum.WEEK,
-} = {}) => {
-  const analyticsHistory =
-    useHistoryStore(
-      (state) => state.analyticsHistory[counterId]
-    ) ?? [];
+  counterId = defaultProps.counterId,
+  period = defaultProps.period,
+} = defaultProps) => {
+  const historyEntry = useHistoryStore(
+    (state) => state.analyticsHistory?.[counterId] ?? null
+  );
+
+  const pastActions = historyEntry?.past ?? [];
 
   const analyticsData = useMemo(() => {
+    if (!counterId || pastActions.length === 0) {
+      return getEmptyAnalytics();
+    }
+
     const filteredActions = filterActionsByPeriod({
-      actions: analyticsHistory,
+      actions: pastActions,
       period,
     });
 
@@ -30,7 +46,17 @@ export const useAnalytics = ({
       streak: calculateStreak(filteredActions),
       hasData: filteredActions.length > 0,
     };
-  }, [analyticsHistory, period]);
+  }, [counterId, pastActions, period]);
 
   return analyticsData;
 };
+
+/* ---------------------------------
+   HELPERS
+--------------------------------- */
+const getEmptyAnalytics = () => ({
+  total: 0,
+  chartData: [],
+  streak: 0,
+  hasData: false,
+});

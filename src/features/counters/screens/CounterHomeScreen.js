@@ -64,7 +64,7 @@ export default function CounterHomeScreen() {
 
  
 const renderAddCounterButton = (onPress) => (
-  <View style={{ paddingHorizontal: 10, marginBottom: 10 }}>
+  <View style={{ paddingHorizontal: 10, marginBottom: 10 , marginTop:50}}>
     <TouchableOpacity
       onPress={onPress}
       style={getAddButtonStyle()}
@@ -75,12 +75,11 @@ const renderAddCounterButton = (onPress) => (
     </TouchableOpacity>
   </View>
 );
-
  
 const renderCategoryFilter = (categories, selected, onSelect) => {
   if (categories.length === 0) return null;
 
-  return (
+  return ( 
     <View style={{ paddingHorizontal: 10, marginBottom: 10 }}>
       <Text style={{ fontSize: 12, fontWeight: 'bold', marginBottom: 8, color: '#666' }}>
         CATEGORIES
