@@ -4,6 +4,7 @@ import { View, Text, TouchableOpacity } from "react-native";
 import GoalInfo from "@/features/goals/components/GoalInfo";
 import GoalEditor from "@/features/goals/components/GoalEditor";
 import { useTheme } from "@/hooks/useTheme";
+import { GoalStatusEnum } from "@/enums/GoalEnums";
 
 const defaultProps = {
   counter: {},
@@ -57,25 +58,55 @@ const renderCounterGoalCard = ({
       {counter.icon} {counter.name}
     </Text>
 
-    {goal && !isEditing && (
+    {/* ✅ COMPLETED state — goal was reached */}
+    {goal?.status === GoalStatusEnum.COMPLETED && !isEditing && (
+      <View style={getCompletedBoxStyle(theme)}>
+        <Text style={getCompletedEmojiStyle()}>🏆</Text>
+        <Text style={getCompletedTextStyle(theme)}>
+          You reached your goal of {goal.targetValue}!
+        </Text>
+        <TouchableOpacity
+          onPress={onDelete}
+          style={getResetButtonStyle(theme)}
+        >
+          <Text style={getResetButtonTextStyle(theme)}>
+            Set New Goal
+          </Text>
+        </TouchableOpacity>
+      </View>
+    )}
+
+    {/* ACTIVE state — goal exists and is being tracked */}
+    {goal?.status === GoalStatusEnum.ACTIVE && !isEditing && (
       <GoalInfo goal={goal} onEdit={onEdit} onDelete={onDelete} />
     )}
 
+    {/* NO goal — initial state */}
     {!goal && !isEditing && (
       <TouchableOpacity onPress={onEdit}>
         <Text style={getSetGoalStyle(theme)}>Set Goal</Text>
       </TouchableOpacity>
     )}
 
+    {/* EDITING state */}
     {isEditing && (
       <GoalEditor
         value={targetValue}
+        previousValue={
+          goal?.status === GoalStatusEnum.ACTIVE
+            ? goal.targetValue
+            : null
+        }
         onChange={onTargetChange}
         onSave={onSave}
       />
     )}
   </View>
 );
+
+/* ---------------------------------
+   STYLES (THEME-AWARE)
+--------------------------------- */
 
 const getCardStyle = (theme) => ({
   backgroundColor: theme.card,
@@ -96,4 +127,35 @@ const getNameStyle = (theme) => ({
 const getSetGoalStyle = (theme) => ({
   color: theme.primary ?? "#007AFF",
   fontWeight: "600",
+});
+
+const getCompletedBoxStyle = (theme) => ({
+  alignItems: "center",
+  paddingVertical: 10,
+  gap: 6,
+});
+
+const getCompletedEmojiStyle = () => ({
+  fontSize: 28,
+});
+
+const getCompletedTextStyle = (theme) => ({
+  fontSize: 14,
+  fontWeight: "600",
+  color: theme.text,
+  textAlign: "center",
+});
+
+const getResetButtonStyle = (theme) => ({
+  marginTop: 6,
+  paddingVertical: 8,
+  paddingHorizontal: 20,
+  backgroundColor: theme.primary ?? "#007AFF",
+  borderRadius: 8,
+});
+
+const getResetButtonTextStyle = (theme) => ({
+  color: theme.onPrimary ?? "#fff",
+  fontWeight: "bold",
+  fontSize: 14,
 });

@@ -1,5 +1,4 @@
 import { useState } from 'react';
-
 import { useCounterStore } from '@/store/counterStore';
 import { useGoalStore } from '@/store/goalStore';
 import { createGoal } from '@/models/GoalModel';
@@ -26,6 +25,18 @@ export const useGoalsScreen = () => {
   const resetEditor = () => {
     setEditingCounterId(null);
     setTargetValue('');
+  };
+
+  const handleEdit = ({
+    counterId = '',
+    existingGoal = null,
+  } = {}) => {
+    setEditingCounterId(counterId);
+    setTargetValue(
+      existingGoal?.targetValue != null
+        ? String(existingGoal.targetValue)
+        : ''
+    );
   };
 
   const saveGoal = ({
@@ -63,7 +74,7 @@ export const useGoalsScreen = () => {
     editingCounterId,
     targetValue,
     setTargetValue,
-    setEditingCounterId,
+    handleEdit,
     saveGoal,
     removeGoal,
   };

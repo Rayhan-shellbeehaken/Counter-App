@@ -56,7 +56,7 @@ const renderGoalsScreen = ({
   viewModel = [],
   state,
   theme,
-}) => ( 
+}) => (
   <ScrollView contentContainerStyle={getContainerStyle(theme)}>
     {renderHeader(theme)}
 
@@ -93,7 +93,10 @@ const renderGoalCard = ({
     isEditing={state.editingCounterId === counter.id}
     targetValue={state.targetValue}
     onEdit={() =>
-      state.setEditingCounterId(counter.id)
+      state.handleEdit({
+        counterId: counter.id,
+        existingGoal: goal,
+      })
     }
     onTargetChange={state.setTargetValue}
     onSave={() =>

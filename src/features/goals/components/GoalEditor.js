@@ -9,6 +9,7 @@ import { useTheme } from '@/hooks/useTheme';
 
 const defaultProps = {
   value: '',
+  previousValue: null,
   onChange: () => {},
   onSave: () => {},
 };
@@ -19,6 +20,7 @@ const defaultProps = {
 
 export default function GoalEditor({
   value = defaultProps.value,
+  previousValue = defaultProps.previousValue,
   onChange = defaultProps.onChange,
   onSave = defaultProps.onSave,
 }) {
@@ -26,6 +28,7 @@ export default function GoalEditor({
 
   return renderGoalEditor({
     value,
+    previousValue,
     onChange,
     onSave,
     theme,
@@ -38,13 +41,26 @@ export default function GoalEditor({
 
 const renderGoalEditor = ({
   value,
+  previousValue,
   onChange,
   onSave,
   theme,
 }) => (
   <View>
+
+    {/* Show previous value label if editing an existing goal */}
+    {previousValue != null && (
+      <Text style={getPreviousValueStyle(theme)}>
+        Current goal: {previousValue}
+      </Text>
+    )}
+
     <TextInput
-      placeholder="Target value"
+      placeholder={
+        previousValue != null
+          ? `Current: ${previousValue} — enter new value`
+          : 'Enter target value'
+      }
       placeholderTextColor={theme.mutedText ?? '#888'}
       keyboardType="numeric"
       value={value}
@@ -63,7 +79,15 @@ const renderGoalEditor = ({
   </View>
 );
 
- 
+/* ---------------------------------
+   STYLES (THEME-AWARE)
+--------------------------------- */
+
+const getPreviousValueStyle = (theme) => ({
+  fontSize: 13,
+  color: theme.mutedText ?? '#888',
+  marginBottom: 6,
+});
 
 const getInputStyle = (theme) => ({
   borderWidth: 1,
