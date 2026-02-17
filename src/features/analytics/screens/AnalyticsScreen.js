@@ -2,11 +2,14 @@ import React, { useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { useCounterStore } from "@/store/counterStore";
 import { useHistoryStore } from "@/store/historyStore";
+import { useGoalStore } from "@/store/goalStore";
 import { TimePeriodEnum } from "@/enums/AnalyticsEnums";
+import { GoalStatusEnum } from "@/enums/GoalEnums";
 import {
   calculateCounterStats,
   getPeriodLabel,
-  getChartDataPoints,
+  calculateStreakStats,
+  buildHeatmapData,
 } from "@/services/analyticsService";
 import { useTheme } from "@/hooks/useTheme";
 
@@ -18,77 +21,65 @@ export default function AnalyticsScreen({
   period = defaultProps.period,
 } = defaultProps) {
   const [selectedPeriod, setSelectedPeriod] = useState(period);
-
   const theme = useTheme();
-
   const counters = useCounterStore((state) => state.counters) ?? [];
-
-  const historyByCounter =
-    useHistoryStore((state) => state.historyByCounter) ?? {};
-
-  const handlePeriodChange = (newPeriod = defaultProps.period) => {
-    setSelectedPeriod(newPeriod);
-  };
+  const historyByCounter = useHistoryStore((state) => state.historyByCounter) ?? {};
+  const goals = useGoalStore((state) => state.goals) ?? [];
 
   return renderAnalyticsContent(
     theme,
     counters,
     historyByCounter,
+    goals,
     selectedPeriod,
-    handlePeriodChange,
+    setSelectedPeriod,
   );
 }
 
 const renderAnalyticsContent = (
   theme,
-  counters = [],
-  historyByCounter = {},
+  counters,
+  historyByCounter,
+  goals,
   selectedPeriod,
   onPeriodChange,
 ) => (
   <ScrollView style={getContainerStyle(theme)}>
     {renderHeader(theme)}
     {renderPeriodSelector(theme, selectedPeriod, onPeriodChange)}
-    {renderCounterStats(theme, counters, historyByCounter, selectedPeriod)}
-    <View style={{ height: 20 }} />
+    {renderCounterStats(theme, counters, historyByCounter, goals, selectedPeriod)}
+    <View style={{ height: 30 }} />
   </ScrollView>
 );
 
+/* ---------------------------------
+   HEADER
+--------------------------------- */
 const renderHeader = (theme) => (
-  <View style={getHeaderStyle(theme)}>
+  <View style={getHeaderStyle()}>
     <Text style={getTitleStyle(theme)}>Analytics</Text>
     <Text style={getSubtitleStyle(theme)}>Track your counter progress</Text>
   </View>
 );
 
+/* ---------------------------------
+   PERIOD SELECTOR
+--------------------------------- */
 const renderPeriodSelector = (theme, selectedPeriod, onPeriodChange) => (
   <View style={getPeriodSelectorStyle()}>
-    {renderPeriodButton(
-      theme,
+    {[
       TimePeriodEnum.SEVEN_DAYS,
-      selectedPeriod,
-      onPeriodChange,
-    )}
-    {renderPeriodButton(
-      theme,
       TimePeriodEnum.THIRTY_DAYS,
-      selectedPeriod,
-      onPeriodChange,
-    )}
-    {renderPeriodButton(
-      theme,
       TimePeriodEnum.NINETY_DAYS,
-      selectedPeriod,
-      onPeriodChange,
-    )}
+    ].map((p) => renderPeriodButton(theme, p, selectedPeriod, onPeriodChange))}
   </View>
 );
 
 const renderPeriodButton = (theme, period, selectedPeriod, onPeriodChange) => {
   const isActive = period === selectedPeriod;
-
   return (
     <TouchableOpacity
+      key={period}
       onPress={() => onPeriodChange(period)}
       style={getPeriodButtonStyle(theme, isActive)}
     >
@@ -99,45 +90,183 @@ const renderPeriodButton = (theme, period, selectedPeriod, onPeriodChange) => {
   );
 };
 
+/* ---------------------------------
+   COUNTER STATS LIST
+--------------------------------- */
 const renderCounterStats = (
   theme,
-  counters = [],
-  historyByCounter = {},
+  counters,
+  historyByCounter,
+  goals,
   selectedPeriod,
 ) => {
-  if (!counters.length) {
-    return renderEmptyState(theme);
-  }
+  if (!counters.length) return renderEmptyState(theme);
 
   return (
     <View style={getStatsContainerStyle()}>
       {counters.map((counter) => {
         const counterHistory = historyByCounter[counter.id] ?? {
           past: [],
+          analyticsLog: [],
         };
+        const actions = counterHistory.analyticsLog ?? counterHistory.past ?? [];
+        const goal =
+          goals.find(
+            (g) =>
+              g.counterId === counter.id &&
+              (g.status === GoalStatusEnum.ACTIVE ||
+                g.status === GoalStatusEnum.COMPLETED),
+          ) ?? null;
 
-        const actions = counterHistory.past ?? [];
-
-        return renderCounterStatCard(theme, counter, actions, selectedPeriod);
+        return renderCounterStatCard(theme, counter, actions, goal, selectedPeriod);
       })}
     </View>
   );
 };
 
-const renderCounterStatCard = (theme, counter, actions, selectedPeriod) => {
+/* ---------------------------------
+   STAT CARD
+--------------------------------- */
+const renderCounterStatCard = (theme, counter, actions, goal, selectedPeriod) => {
   const stats = calculateCounterStats(counter, actions, selectedPeriod);
+  const streakStats = calculateStreakStats(actions);
+  const heatmapData = buildHeatmapData(actions);
+  const isCompleted = goal?.status === GoalStatusEnum.COMPLETED;
+  const progressValue = isCompleted ? goal.targetValue : stats.currentValue;
 
   return (
     <View key={counter.id} style={getStatCardStyle(theme)}>
+
       {renderCounterNameAndIcon(theme, counter)}
+
       {renderStatRow(theme, "Current Value", `${stats.currentValue}`)}
       {renderStatRow(theme, "Total Changes", `${stats.totalChanges}`)}
       {renderStatRow(theme, "Avg Daily", `${stats.avgDaily}`)}
-      {renderSimpleChart(theme, actions, selectedPeriod)}
+
+      {goal
+        ? renderGoalProgress(theme, progressValue, goal.targetValue, isCompleted)
+        : null}
+
+      {renderStreakSection(theme, streakStats)}
+      {renderHeatmap(theme, heatmapData)}
+
     </View>
   );
 };
 
+/* ---------------------------------
+   GOAL PROGRESS BAR
+--------------------------------- */
+const renderGoalProgress = (theme, currentValue, targetValue, isCompleted) => {
+  const pct = Math.min(
+    targetValue > 0 ? (currentValue / targetValue) * 100 : 0,
+    100,
+  );
+
+  return (
+    <View style={getGoalProgressWrapperStyle(theme, isCompleted)}>
+      <View style={getGoalProgressRowStyle()}>
+        <Text style={getGoalProgressTitleStyle(theme)}>
+          {isCompleted ? "Goal Reached" : "Goal Progress"}
+        </Text>
+        <Text style={getGoalProgressBadgeStyle(isCompleted)}>
+          {isCompleted ? "🏆 100%" : `${Math.round(pct)}%`}
+        </Text>
+      </View>
+      <View style={getGoalProgressTrackStyle(theme)}>
+        <View style={getGoalProgressFillStyle(theme, pct, isCompleted)} />
+      </View>
+      <Text style={getGoalProgressSubtextStyle(theme)}>
+        {isCompleted
+          ? `You hit your target of ${targetValue}!`
+          : `${currentValue} / ${targetValue}`}
+      </Text>
+    </View>
+  );
+};
+
+/* ---------------------------------
+   STREAK SECTION
+--------------------------------- */
+const renderStreakSection = (theme, streakStats) => (
+  <View style={getStreakSectionStyle(theme)}>
+    <Text style={getStreakSectionTitleStyle(theme)}>Activity Streak</Text>
+    <View style={getStreakRowStyle()}>
+
+      <View style={getStreakBoxStyle(theme, true)}>
+        <Text style={getStreakEmojiStyle()}>🔥</Text>
+        <Text style={getStreakNumberStyle(theme, true)}>
+          {streakStats.currentStreak}
+        </Text>
+        <Text style={getStreakLabelStyle(theme)}>Current</Text>
+      </View>
+
+      <View style={getStreakBoxStyle(theme, false)}>
+        <Text style={getStreakEmojiStyle()}>🏅</Text>
+        <Text style={getStreakNumberStyle(theme, false)}>
+          {streakStats.bestStreak}
+        </Text>
+        <Text style={getStreakLabelStyle(theme)}>Best</Text>
+      </View>
+
+      <View style={getStreakBoxStyle(theme, false)}>
+        <Text style={getStreakEmojiStyle()}>📅</Text>
+        <Text style={getStreakNumberStyle(theme, false)}>
+          {streakStats.totalActiveDays}
+        </Text>
+        <Text style={getStreakLabelStyle(theme)}>Total Days</Text>
+      </View>
+
+    </View>
+  </View>
+);
+
+/* ---------------------------------
+   HEATMAP (10 weeks × 7 days)
+--------------------------------- */
+const renderHeatmap = (theme, heatmapData) => {
+  // Split 70 days into 10 columns of 7
+  const weeks = [];
+  for (let i = 0; i < heatmapData.length; i += 7) {
+    weeks.push(heatmapData.slice(i, i + 7));
+  }
+
+  return (
+    <View style={getHeatmapWrapperStyle()}>
+      <Text style={getHeatmapTitleStyle(theme)}>Activity (Last 10 Weeks)</Text>
+      <View style={getHeatmapGridStyle()}>
+        {weeks.map((week, wi) => (
+          <View key={wi} style={getHeatmapColumnStyle()}>
+            {week.map((day) => (
+              <View
+                key={day.key}
+                style={getHeatmapCellStyle(theme, day.intensity, day.isToday)}
+              />
+            ))}
+          </View>
+        ))}
+      </View>
+      {renderHeatmapLegend(theme)}
+    </View>
+  );
+};
+
+const renderHeatmapLegend = (theme) => (
+  <View style={getHeatmapLegendStyle()}>
+    <Text style={getHeatmapLegendLabelStyle(theme)}>Less</Text>
+    {[0, 1, 2, 3, 4].map((intensity) => (
+      <View
+        key={intensity}
+        style={getHeatmapLegendCellStyle(theme, intensity)}
+      />
+    ))}
+    <Text style={getHeatmapLegendLabelStyle(theme)}>More</Text>
+  </View>
+);
+
+/* ---------------------------------
+   NAME / ICON
+--------------------------------- */
 const renderCounterNameAndIcon = (theme, counter) => (
   <View style={getNameRowStyle()}>
     <Text style={getCounterIconStyle()}>{counter.icon}</Text>
@@ -145,6 +274,9 @@ const renderCounterNameAndIcon = (theme, counter) => (
   </View>
 );
 
+/* ---------------------------------
+   STAT ROW
+--------------------------------- */
 const renderStatRow = (theme, label, value) => (
   <View style={getStatRowStyle()}>
     <Text style={getStatLabelStyle(theme)}>{label}:</Text>
@@ -152,39 +284,9 @@ const renderStatRow = (theme, label, value) => (
   </View>
 );
 
-const renderSimpleChart = (theme, actions = [], selectedPeriod) => {
-  const dataPoints = getChartDataPoints(actions, selectedPeriod);
-
-  if (!dataPoints.length) {
-    return renderNoChartData(theme);
-  }
-
-  const maxValue = Math.max(...dataPoints.map((d) => d.value), 1);
-
-  return (
-    <View style={getChartContainerStyle()}>
-      <Text style={getChartTitleStyle(theme)}>Progress Chart</Text>
-      <View style={getBarsContainerStyle()}>
-        {dataPoints
-          .slice(-7)
-          .map((point, index) => renderBarItem(theme, point, maxValue, index))}
-      </View>
-    </View>
-  );
-};
-
-const renderBarItem = (theme, point, maxValue, index) => {
-  const heightPercent = maxValue > 0 ? (point.value / maxValue) * 100 : 0;
-
-  return (
-    <View key={index} style={getBarItemStyle()}>
-      <View style={getBarStyle(theme, heightPercent)} />
-      <Text style={getBarLabelStyle(theme)}>{point.date}</Text>
-      <Text style={getBarValueStyle(theme)}>{point.value}</Text>
-    </View>
-  );
-};
-
+/* ---------------------------------
+   EMPTY STATE
+--------------------------------- */
 const renderEmptyState = (theme) => (
   <View style={getEmptyStateStyle()}>
     <Text style={getEmptyStateTextStyle(theme)}>
@@ -193,11 +295,9 @@ const renderEmptyState = (theme) => (
   </View>
 );
 
-const renderNoChartData = (theme) => (
-  <View style={getNoChartDataStyle()}>
-    <Text style={getNoChartDataTextStyle(theme)}>No activity data yet</Text>
-  </View>
-);
+/* ===================================
+   STYLES
+=================================== */
 
 const getContainerStyle = (theme) => ({
   flex: 1,
@@ -205,9 +305,7 @@ const getContainerStyle = (theme) => ({
   marginTop: 60,
 });
 
-const getHeaderStyle = (theme) => ({
-  padding: 16,
-});
+const getHeaderStyle = () => ({ padding: 16 });
 
 const getTitleStyle = (theme) => ({
   fontSize: 24,
@@ -217,7 +315,7 @@ const getTitleStyle = (theme) => ({
 
 const getSubtitleStyle = (theme) => ({
   fontSize: 14,
-  color: theme.text,
+  color: theme.mutedText ?? theme.text,
 });
 
 const getPeriodSelectorStyle = () => ({
@@ -238,82 +336,207 @@ const getPeriodButtonTextStyle = (theme, isActive) => ({
   fontWeight: isActive ? "bold" : "normal",
 });
 
-const getStatsContainerStyle = () => ({
-  paddingHorizontal: 12,
-});
+const getStatsContainerStyle = () => ({ paddingHorizontal: 12 });
 
 const getStatCardStyle = (theme) => ({
   backgroundColor: theme.card,
-  padding: 12,
-  borderRadius: 12,
-  marginBottom: 12,
+  padding: 14,
+  borderRadius: 14,
+  marginBottom: 14,
 });
 
 const getNameRowStyle = () => ({
   flexDirection: "row",
   alignItems: "center",
+  marginBottom: 8,
 });
 
-const getCounterIconStyle = () => ({
-  fontSize: 24,
-  marginRight: 8,
-});
+const getCounterIconStyle = () => ({ fontSize: 24, marginRight: 8 });
 
 const getCounterLabelStyle = (theme) => ({
-  fontSize: 16,
+  fontSize: 17,
+  fontWeight: "bold",
   color: theme.text,
 });
 
 const getStatRowStyle = () => ({
   flexDirection: "row",
   justifyContent: "space-between",
-  marginTop: 6,
+  marginTop: 5,
 });
 
 const getStatLabelStyle = (theme) => ({
-  color: theme.text,
+  color: theme.mutedText ?? theme.text,
+  fontSize: 13,
 });
 
 const getStatValueStyle = (theme) => ({
   color: theme.text,
   fontWeight: "bold",
+  fontSize: 13,
 });
 
-const getChartContainerStyle = () => ({
+// Goal progress
+const getGoalProgressWrapperStyle = (theme, isCompleted) => ({
   marginTop: 12,
+  padding: 10,
+  borderRadius: 10,
+  backgroundColor: isCompleted
+    ? "rgba(52, 199, 89, 0.15)"
+    : "rgba(0, 122, 255, 0.08)",
+  borderWidth: 1,
+  borderColor: isCompleted ? "#34C759" : (theme.border ?? "#444"),
 });
 
-const getChartTitleStyle = (theme) => ({
-  color: theme.text,
+const getGoalProgressRowStyle = () => ({
+  flexDirection: "row",
+  justifyContent: "space-between",
+  alignItems: "center",
   marginBottom: 6,
 });
 
-const getBarsContainerStyle = () => ({
+const getGoalProgressTitleStyle = (theme) => ({
+  fontSize: 13,
+  fontWeight: "600",
+  color: theme.text,
+});
+
+const getGoalProgressBadgeStyle = (isCompleted) => ({
+  fontSize: 13,
+  fontWeight: "bold",
+  color: isCompleted ? "#34C759" : "#007AFF",
+});
+
+const getGoalProgressTrackStyle = (theme) => ({
+  height: 10,
+  backgroundColor: theme.border ?? "#333",
+  borderRadius: 5,
+  overflow: "hidden",
+});
+
+const getGoalProgressFillStyle = (theme, pct, isCompleted) => ({
+  height: 10,
+  width: `${pct}%`,
+  backgroundColor: isCompleted ? "#34C759" : (theme.primary ?? "#007AFF"),
+  borderRadius: 5,
+});
+
+const getGoalProgressSubtextStyle = (theme) => ({
+  fontSize: 11,
+  color: theme.mutedText ?? theme.text,
+  marginTop: 4,
+});
+
+// Streak
+const getStreakSectionStyle = (theme) => ({
+  marginTop: 14,
+  padding: 12,
+  borderRadius: 12,
+  backgroundColor: theme.background ?? "rgba(0,0,0,0.1)",
+});
+
+const getStreakSectionTitleStyle = (theme) => ({
+  fontSize: 13,
+  fontWeight: "600",
+  color: theme.mutedText ?? theme.text,
+  marginBottom: 10,
+  textTransform: "uppercase",
+  letterSpacing: 0.5,
+});
+
+const getStreakRowStyle = () => ({
   flexDirection: "row",
-  alignItems: "flex-end",
-  height: 80,
+  justifyContent: "space-around",
 });
 
-const getBarItemStyle = () => ({
-  flex: 1,
+const getStreakBoxStyle = (theme, isHighlight) => ({
   alignItems: "center",
+  padding: 10,
+  borderRadius: 10,
+  minWidth: 80,
+  backgroundColor: isHighlight
+    ? "rgba(255, 149, 0, 0.15)"
+    : "rgba(128,128,128,0.08)",
+  borderWidth: isHighlight ? 1 : 0,
+  borderColor: isHighlight ? "#FF9500" : "transparent",
 });
 
-const getBarStyle = (theme, heightPercent) => ({
-  width: 8,
-  height: `${heightPercent}%`,
-  backgroundColor: theme.text,
-  borderRadius: 4,
+const getStreakEmojiStyle = () => ({
+  fontSize: 22,
+  marginBottom: 2,
 });
 
-const getBarLabelStyle = (theme) => ({
+const getStreakNumberStyle = (theme, isHighlight) => ({
+  fontSize: 26,
+  fontWeight: "bold",
+  color: isHighlight ? "#FF9500" : theme.text,
+});
+
+const getStreakLabelStyle = (theme) => ({
+  fontSize: 11,
+  color: theme.mutedText ?? theme.text,
+  marginTop: 2,
+});
+
+// Heatmap
+const getHeatmapWrapperStyle = () => ({
+  marginTop: 14,
+});
+
+const getHeatmapTitleStyle = (theme) => ({
+  fontSize: 13,
+  fontWeight: "600",
+  color: theme.mutedText ?? theme.text,
+  marginBottom: 8,
+  textTransform: "uppercase",
+  letterSpacing: 0.5,
+});
+
+const getHeatmapGridStyle = () => ({
+  flexDirection: "row",
+  gap: 3,
+});
+
+const getHeatmapColumnStyle = () => ({
+  flexDirection: "column",
+  gap: 3,
+});
+
+const HEATMAP_COLORS = [
+  "rgba(128,128,128,0.15)",  // 0 - no activity
+  "rgba(0, 122, 255, 0.25)", // 1 - light
+  "rgba(0, 122, 255, 0.45)", // 2 - medium
+  "rgba(0, 122, 255, 0.70)", // 3 - high
+  "rgba(0, 122, 255, 1.00)", // 4 - max
+];
+
+const getHeatmapCellStyle = (theme, intensity, isToday) => ({
+  width: 14,
+  height: 14,
+  borderRadius: 3,
+  backgroundColor: HEATMAP_COLORS[intensity],
+  borderWidth: isToday ? 1.5 : 0,
+  borderColor: isToday ? (theme.text ?? "#fff") : "transparent",
+});
+
+const getHeatmapLegendStyle = () => ({
+  flexDirection: "row",
+  alignItems: "center",
+  marginTop: 6,
+  gap: 3,
+});
+
+const getHeatmapLegendLabelStyle = (theme) => ({
   fontSize: 10,
-  color: theme.text,
+  color: theme.mutedText ?? theme.text,
+  marginHorizontal: 2,
 });
 
-const getBarValueStyle = (theme) => ({
-  fontSize: 10,
-  color: theme.text,
+const getHeatmapLegendCellStyle = (theme, intensity) => ({
+  width: 10,
+  height: 10,
+  borderRadius: 2,
+  backgroundColor: HEATMAP_COLORS[intensity],
 });
 
 const getEmptyStateStyle = () => ({
@@ -322,14 +545,5 @@ const getEmptyStateStyle = () => ({
 });
 
 const getEmptyStateTextStyle = (theme) => ({
-  color: theme.text,
-});
-
-const getNoChartDataStyle = () => ({
-  padding: 12,
-  alignItems: "center",
-});
-
-const getNoChartDataTextStyle = (theme) => ({
   color: theme.text,
 });

@@ -2,7 +2,10 @@ import { create } from 'zustand';
 import { Alert } from 'react-native';
 
 import { useHistoryStore } from '@/store/historyStore';
-import { createHistoryAction, HistoryActionTypeEnum } from '@/models/HistoryAction';
+import {
+  createHistoryAction,
+  HistoryActionTypeEnum,
+} from '@/models/HistoryAction';
 import { CounterCategoryEnum } from '@/enums/CounterEnums';
 
 import { evaluateGoalsForCounter } from '@/hooks/useGoalEvaluator';
@@ -41,7 +44,10 @@ export const useCounterStore = create((set, get) => ({
     const counter = state.counters.find((c) => c.id === id);
     if (!counter) return;
 
-    const newValue = handleMaxLimitCheck(counter, counter.value + step);
+    const newValue = handleMaxLimitCheck(
+      counter,
+      counter.value + step
+    );
 
     const updatedCounter = {
       ...counter,
@@ -58,19 +64,18 @@ export const useCounterStore = create((set, get) => ({
 
     useHistoryStore.getState().pushAction(id, action);
 
-    // ✅ PURE STATE UPDATE
     set({
       counters: state.counters.map((c) =>
         c.id === id ? updatedCounter : c
       ),
     });
 
-    // ✅ SIDE EFFECT (AFTER STATE UPDATE)
     evaluateGoalsForCounter({
       counter: updatedCounter,
       analytics: getAnalyticsSnapshot({
         actions:
-          useHistoryStore.getState().analyticsHistory?.[id] ?? [],
+          useHistoryStore.getState().analyticsHistory?.[id] ??
+          [],
       }),
     });
   },
@@ -83,7 +88,10 @@ export const useCounterStore = create((set, get) => ({
     const counter = state.counters.find((c) => c.id === id);
     if (!counter) return;
 
-    const newValue = handleMinLimitCheck(counter, counter.value - step);
+    const newValue = handleMinLimitCheck(
+      counter,
+      counter.value - step
+    );
 
     const updatedCounter = {
       ...counter,
@@ -132,7 +140,9 @@ export const useCounterStore = create((set, get) => ({
   --------------------------------- */
   getCategories: () => {
     const { counters } = get();
-    return Array.from(new Set(counters.map((c) => c.category)));
+    return Array.from(
+      new Set(counters.map((c) => c.category))
+    );
   },
 
   setSelectedCategory: (
@@ -171,14 +181,18 @@ const handleMinLimitCheck = (
   counter = {},
   proposedValue = 0
 ) => {
-  if (counter?.minValue == null) return proposedValue;
+  // ✅ DEFAULT MIN VALUE = 0
+  const minValue =
+    typeof counter?.minValue === 'number'
+      ? counter.minValue
+      : 0;
 
-  if (proposedValue < counter.minValue) {
+  if (proposedValue < minValue) {
     Alert.alert(
       '⚠️ Min Limit Reached',
-      `Minimum value for ${counter.name} is ${counter.minValue}`
+      `Minimum value for ${counter.name} is ${minValue}`
     );
-    return counter.minValue;
+    return minValue;
   }
 
   return proposedValue;

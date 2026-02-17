@@ -20,12 +20,15 @@ const renderMinValueField = ({ control, theme }) => (
   <Controller
     control={control}
     name="minValue"
+      //  defaultValue={0}
     rules={getValidationRules()}
     render={({ field }) =>
       renderFieldContent({
+        
         value: field.value,
         onChange: field.onChange,
         theme,
+        
       })
     }
   />

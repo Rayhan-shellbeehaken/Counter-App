@@ -1,13 +1,14 @@
 import { create } from 'zustand';
 
-const MAX_HISTORY = 10;
+const MAX_HISTORY = 10; // undo/redo cap (unchanged)
 
 /* ---------------------------------
    DEFAULT STRUCTURE
 --------------------------------- */
 const createEmptyHistory = () => ({
-  past: [],
+  past: [],      // capped at 10 — for undo/redo only
   future: [],
+  analyticsLog: [], // ✅ NEW: unlimited — for analytics only
 });
 
 export const useHistoryStore = create((set, get) => ({
@@ -48,8 +49,11 @@ export const useHistoryStore = create((set, get) => ({
         historyByCounter: {
           ...state.historyByCounter,
           [counterId]: {
+            // undo/redo past stays capped at 10
             past: [...counterHistory.past, action].slice(-MAX_HISTORY),
             future: [],
+            // ✅ analyticsLog grows forever — never sliced
+            analyticsLog: [...(counterHistory.analyticsLog ?? []), action],
           },
         },
       };
@@ -76,6 +80,7 @@ export const useHistoryStore = create((set, get) => ({
         [counterId]: {
           past: counterHistory.past.slice(0, -1),
           future: [lastAction, ...counterHistory.future],
+          analyticsLog: counterHistory.analyticsLog ?? [],
         },
       },
     }));
@@ -102,6 +107,7 @@ export const useHistoryStore = create((set, get) => ({
         [counterId]: {
           past: [...counterHistory.past, nextAction].slice(-MAX_HISTORY),
           future: counterHistory.future.slice(1),
+          analyticsLog: counterHistory.analyticsLog ?? [],
         },
       },
     }));
