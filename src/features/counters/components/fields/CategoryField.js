@@ -70,7 +70,7 @@ const renderCategoryOption = (category, selected, onSelect, theme) => (
 );
 
 const getContainerStyle = () => ({
-  marginBottom: 6,
+  marginBottom: 5,
 });
 
 const getLabelStyle = (theme) => ({

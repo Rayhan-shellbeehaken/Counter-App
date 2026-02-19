@@ -1,9 +1,9 @@
-import React from 'react';
-import { View, Text, Switch } from 'react-native';
+import React from "react";
+import { View, Text, Switch } from "react-native";
 
-import { useThemeStore } from '@/store/themeStore';
-import { ThemeModeEnum } from '@/enums/ThemeEnums';
-import { useTheme } from '@/hooks/useTheme';
+import { useThemeStore } from "@/store/themeStore";
+import { ThemeModeEnum } from "@/enums/ThemeEnums";
+import { useTheme } from "@/hooks/useTheme";
 
 const defaultProps = {};
 
@@ -19,10 +19,6 @@ export default function SettingsScreen({} = defaultProps) {
   });
 }
 
-/* ---------------------------------
-   RENDER
---------------------------------- */
-
 const renderSettingsScreen = ({
   theme = {},
   mode = ThemeModeEnum.LIGHT,
@@ -34,36 +30,29 @@ const renderSettingsScreen = ({
     <View style={getRowStyle()}>
       <Text style={getLabelStyle(theme)}>Dark Mode</Text>
 
-      <Switch
-        value={mode === ThemeModeEnum.DARK}
-        onValueChange={toggleTheme}
-      />
+      <Switch value={mode === ThemeModeEnum.DARK} onValueChange={toggleTheme} />
     </View>
   </View>
 );
-
-/* ---------------------------------
-   STYLES
---------------------------------- */
 
 const getContainerStyle = (theme = {}) => ({
   flex: 1,
   padding: 20,
   backgroundColor: theme.background,
-  marginTop:70,
+  marginTop: 70,
 });
 
 const getTitleStyle = (theme = {}) => ({
   fontSize: 24,
-  fontWeight: 'bold',
+  fontWeight: "bold",
   color: theme.text,
   marginBottom: 20,
 });
 
 const getRowStyle = () => ({
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  alignItems: 'center',
+  flexDirection: "row",
+  justifyContent: "space-between",
+  alignItems: "center",
 });
 
 const getLabelStyle = (theme = {}) => ({

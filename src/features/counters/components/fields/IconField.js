@@ -64,7 +64,7 @@ const renderIconItem = ({ icon, isActive, onSelect, theme }) => (
 );
 
 const getContainerStyle = () => ({
-  marginBottom: 16,
+  marginBottom: 2,
 });
 
 const getLabelStyle = (theme) => ({

@@ -67,7 +67,7 @@ const handleValueChange = (text = "", onChange = () => {}) => {
 };
 
 const getContainerStyle = () => ({
-  marginBottom: 16,
+  marginBottom: 50,
 });
 
 const getLabelStyle = (theme) => ({
