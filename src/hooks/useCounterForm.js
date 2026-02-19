@@ -3,50 +3,77 @@ import {
   CounterIconEnum,
   CounterCategoryEnum,
   CounterColorEnum,
+  CounterFieldEnum,
 } from "@/enums/CounterEnums";
-import { CounterFieldEnum } from "@/enums/CounterEnums";
+
 const noop = () => {};
 const COLORS = Object.values(CounterColorEnum);
 
-export function useCounterForm({ onSubmit = noop }) {
-  const {
-    control,
-    handleSubmit,
-    reset,
-    setError,
-  } = useForm({
+const getRandomColor = () =>
+  COLORS[Math.floor(Math.random() * COLORS.length)];
+
+const validationRules = Object.freeze({
+  [CounterFieldEnum.NAME]: {
+    required: "Counter name is required",
+    validate: (value = "") =>
+      value.trim().length > 0 || "Name cannot be empty",
+    minLength: {
+      value: 2,
+      message: "Name must be at least 2 characters",
+    },
+    maxLength: {
+      value: 20,
+      message: "Name must be under 20 characters",
+    },
+    
+  },
+
+[CounterFieldEnum.STEP]: {
+  required: "Step is required",
+  validate: (value) => {
+    if (value === "" || value === null || value === undefined) {
+      return "Step is required";
+    }
+
+    const num = Number(value);
+
+    if (!Number.isFinite(num)) {
+      return "Step must be a valid number";
+    }
+
+    if (num < 1) {
+      return "Step must be at least 1";
+    }
+
+    if (num > 1000) {
+      return "Step is too large";
+    }
+
+    return true;
+  },
+},
+
+});
+
+export function useCounterForm({ onSubmit = noop } = {}) {
+  const { control, handleSubmit, reset } = useForm({
     defaultValues: {
       name: "",
       icon: CounterIconEnum.GENERIC,
       category: CounterCategoryEnum.GENERAL,
-      step: 1,
-      minValue: null,
-      maxValue: null,
+      step: 2,
     },
+    mode: "onChange", // better UX validation
   });
 
-  const submit = handleSubmit((data) => {
-    const { minValue, maxValue } = data;
+  const submit = handleSubmit((data = {}) => {
+    const safeName = (data.name ?? "").trim();
 
-    // Cross-field validation
-    if (
-      minValue !== null &&
-      maxValue !== null &&
-      minValue > maxValue
-    ) {
-    setError(CounterFieldEnum.MAX_VALUE, {
-  type: "validate",
-  message: "Max value must be greater than Min value",
-});
-      return;
-    }
-
-    const color =
-      COLORS[Math.floor(Math.random() * COLORS.length)];
+    const color = getRandomColor();
 
     onSubmit({
       ...data,
-      name: data.name.trim(),
+      name: safeName,
       color,
     });
 
@@ -56,5 +83,6 @@ export function useCounterForm({ onSubmit = noop }) {
   return {
     control,
     submit,
+    validationRules,
   };
 }

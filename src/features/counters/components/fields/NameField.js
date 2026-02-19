@@ -1,84 +1,101 @@
 import { View, Text, TextInput } from "react-native";
 import { Controller } from "react-hook-form";
-
 import { useTheme } from "@/hooks/useTheme";
 
 const defaultProps = {
   control: null,
-  error: "",
+  rules: {},
 };
+
+const MAX_CHAR = 20;
 
 export default function NameField({
   control = defaultProps.control,
-  error = defaultProps.error,
+  rules = defaultProps.rules,
 } = {}) {
   const theme = useTheme();
 
   return renderNameField({
     control,
-    error,
+    rules,
     theme,
   });
 }
 
-const renderNameField = ({ control, error, theme }) => (
+const renderNameField = ({ control, rules, theme }) => (
   <Controller
     control={control}
     name="name"
-    rules={{
-      required: "Counter name is required",
-    }}
-    render={({ field }) =>
+    rules={rules}
+    render={({ field, fieldState }) =>
       renderFieldContent({
         field,
-        error,
+        error: fieldState.error?.message ?? "",
         theme,
       })
     }
   />
 );
 
-const renderFieldContent = ({ field, error, theme }) => (
-  <View style={getContainerStyle()}>
-    <Text style={getLabelStyle(theme)}>Counter Name*</Text>
+const renderFieldContent = ({ field = {}, error = "", theme = {} }) => {
+  const value = field.value ?? "";
+  const length = value.length;
 
-    <TextInput
-      value={field.value ?? ""}
-      onChangeText={field.onChange}
-      placeholder="e.g. Water Intake"
-      placeholderTextColor={theme.placeholder}
-      style={getInputStyle(theme)}
-    />
+  return (
+    <View style={getContainerStyle()}>
+      <Text style={getLabelStyle(theme)}>Counter Name*</Text>
 
-    {error ? renderErrorText(error, theme) : null}
-  </View>
-);
+      <TextInput
+        value={value}
+        onChangeText={field.onChange}
+        placeholder="e.g. Water Intake"
+        placeholderTextColor={theme.placeholder}
+        style={getInputStyle(theme, error)}
+      />
 
-const renderErrorText = (error, theme) => (
-  <Text style={getErrorTextStyle(theme)}>{error}</Text>
+      {/* Character Counter (best UX with validation) */}
+      <Text style={getCounterStyle(theme, length)}>
+        {length}/{MAX_CHAR}
+      </Text>
+
+      {error ? renderErrorText(error) : null}
+    </View>
+  );
+};
+
+const renderErrorText = (error = "") => (
+  <Text style={getErrorTextStyle()}>{error}</Text>
 );
 
 const getContainerStyle = () => ({
   marginBottom: 16,
 });
 
-const getLabelStyle = (theme) => ({
+const getLabelStyle = (theme = {}) => ({
   fontWeight: "bold",
   marginBottom: 6,
   color: theme.text,
 });
 
-const getInputStyle = (theme) => ({
+const getInputStyle = (theme = {}, error = "") => ({
   borderWidth: 1,
-  borderColor: theme.border,
+  borderColor: error ? "#FF3B30" : theme.border,
   borderRadius: 8,
   padding: 10,
   color: theme.text,
   backgroundColor: theme.card,
-  borderColor: theme.text,
 });
 
-const getErrorTextStyle = (theme) => ({
-  color: theme.danger,
+const getCounterStyle = (theme = {}, length = 0) => ({
   marginTop: 4,
+  fontSize: 12,
+  textAlign: "right",
+  color: length > MAX_CHAR ? "#FF3B30" : theme.placeholder,
+});
+
+const getErrorTextStyle = () => ({
+  color: "#FF3B30", // always red
+  marginTop: 4,
+  fontSize: 12,
+  fontWeight: "500",
 });
