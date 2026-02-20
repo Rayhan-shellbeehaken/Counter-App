@@ -61,7 +61,7 @@ export function useCounterForm({ onSubmit = noop } = {}) {
       name: "",
       icon: CounterIconEnum.GENERIC,
       category: CounterCategoryEnum.GENERAL,
-      step: 2,
+      step: 1,
     },
     mode: "onChange", // better UX validation
   });

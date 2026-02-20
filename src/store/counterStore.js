@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert } from 'react-native';
 
 import { useHistoryStore } from '@/store/historyStore';
@@ -20,151 +22,165 @@ const defaultState = {
 };
 
 /* ---------------------------------
-   STORE
+   STORE (PERSISTED)
 --------------------------------- */
-export const useCounterStore = create((set, get) => ({
-  ...defaultState,
+export const useCounterStore = create(
+  persist(
+    (set, get) => ({
+      ...defaultState,
 
-  /* ---------------------------------
-     CREATE
-  --------------------------------- */
-  createCounter: (counter = null) => {
-    if (!counter?.id) return;
+      /* ---------------------------------
+         CREATE
+      --------------------------------- */
+      createCounter: (counter = null) => {
+        if (!counter?.id) return;
 
-    set((state) => ({
-      counters: [...state.counters, counter],
-    }));
-  },
+        set((state) => ({
+          counters: [...state.counters, counter],
+        }));
+      },
 
-  /* ---------------------------------
-     UPDATE (NEW - for editing counter properties)
-  --------------------------------- */
-  updateCounter: (id = '', updates = {}) => {
-    if (!id) return;
+      /* ---------------------------------
+         UPDATE
+      --------------------------------- */
+      updateCounter: (id = '', updates = {}) => {
+        if (!id) return;
 
-    const state = get();
-    const counter = state.counters.find((c) => c.id === id);
-    if (!counter) return;
+        const state = get();
+        const counter = state.counters.find((c) => c.id === id);
+        if (!counter) return;
 
-    const updatedCounter = {
-      ...counter,
-      ...updates,
-    };
+        const updatedCounter = {
+          ...counter,
+          ...updates,
+        };
 
-    set({
-      counters: state.counters.map((c) =>
-        c.id === id ? updatedCounter : c
-      ),
-    });
-  },
+        set({
+          counters: state.counters.map((c) =>
+            c.id === id ? updatedCounter : c
+          ),
+        });
+      },
 
-  /* ---------------------------------
-     INCREMENT
-  --------------------------------- */
-  increment: (id = '', step = 1) => {
-    const state = get();
-    const counter = state.counters.find((c) => c.id === id);
-    if (!counter) return;
+      /* ---------------------------------
+         INCREMENT
+      --------------------------------- */
+      increment: (id = '', step = 1) => {
+        const state = get();
+        const counter = state.counters.find((c) => c.id === id);
+        if (!counter) return;
 
-    const newValue = handleMaxLimitCheck(counter, counter.value + step);
+        const newValue = handleMaxLimitCheck(counter, counter.value + step);
 
-    const updatedCounter = {
-      ...counter,
-      value: newValue,
-    };
+        const updatedCounter = {
+          ...counter,
+          value: newValue,
+        };
 
-    const action = createHistoryAction({
-      type: HistoryActionTypeEnum.INCREMENT,
-      counterId: id,
-      prevValue: counter.value,
-      nextValue: newValue,
-      step,
-    });
+        const action = createHistoryAction({
+          type: HistoryActionTypeEnum.INCREMENT,
+          counterId: id,
+          prevValue: counter.value,
+          nextValue: newValue,
+          step,
+        });
 
-    useHistoryStore.getState().pushAction(id, action);
+        useHistoryStore.getState().pushAction(id, action);
 
-    set({
-      counters: state.counters.map((c) =>
-        c.id === id ? updatedCounter : c
-      ),
-    });
+        set({
+          counters: state.counters.map((c) =>
+            c.id === id ? updatedCounter : c
+          ),
+        });
 
-    evaluateGoalsForCounter({
-      counter: updatedCounter,
-      analytics: getAnalyticsSnapshot({
-        actions: useHistoryStore.getState().analyticsHistory?.[id] ?? [],
+        evaluateGoalsForCounter({
+          counter: updatedCounter,
+          analytics: getAnalyticsSnapshot({
+            actions: useHistoryStore.getState().analyticsHistory?.[id] ?? [],
+          }),
+        });
+      },
+
+      /* ---------------------------------
+         DECREMENT
+      --------------------------------- */
+      decrement: (id = '', step = 1) => {
+        const state = get();
+        const counter = state.counters.find((c) => c.id === id);
+        if (!counter) return;
+
+        const newValue = handleMinLimitCheck(counter, counter.value - step);
+
+        const updatedCounter = {
+          ...counter,
+          value: newValue,
+        };
+
+        const action = createHistoryAction({
+          type: HistoryActionTypeEnum.DECREMENT,
+          counterId: id,
+          prevValue: counter.value,
+          nextValue: newValue,
+          step,
+        });
+
+        useHistoryStore.getState().pushAction(id, action);
+
+        set({
+          counters: state.counters.map((c) =>
+            c.id === id ? updatedCounter : c
+          ),
+        });
+      },
+
+      /* ---------------------------------
+         VALUE SETTER
+      --------------------------------- */
+      setCounterValue: (id = '', value = 0) => {
+        set((state) => ({
+          counters: state.counters.map((c) =>
+            c.id === id ? { ...c, value } : c
+          ),
+        }));
+      },
+
+      /* ---------------------------------
+         DELETE
+      --------------------------------- */
+      deleteCounter: (id = '') => {
+        set((state) => ({
+          counters: state.counters.filter((c) => c.id !== id),
+        }));
+      },
+
+      /* ---------------------------------
+         CATEGORY HELPERS
+      --------------------------------- */
+      getCategories: () => {
+        const { counters } = get();
+        return Array.from(new Set(counters.map((c) => c.category)));
+      },
+
+      setSelectedCategory: (category = CounterCategoryEnum.GENERAL) =>
+        set({ selectedCategory: category }),
+
+      getFilteredCounters: () => {
+        const { counters, selectedCategory } = get();
+        return counters.filter((c) => c.category === selectedCategory);
+      },
+    }),
+    {
+      name: 'counter-storage', // AsyncStorage key
+      storage: createJSONStorage(() => AsyncStorage),
+
+      // Only persist real data (not functions)
+      partialize: (state) => ({
+        counters: state.counters,
+        selectedCategory: state.selectedCategory,
       }),
-    });
-  },
-
-  /* ---------------------------------
-     DECREMENT
-  --------------------------------- */
-  decrement: (id = '', step = 1) => {
-    const state = get();
-    const counter = state.counters.find((c) => c.id === id);
-    if (!counter) return;
-
-    const newValue = handleMinLimitCheck(counter, counter.value - step);
-
-    const updatedCounter = {
-      ...counter,
-      value: newValue,
-    };
-
-    const action = createHistoryAction({
-      type: HistoryActionTypeEnum.DECREMENT,
-      counterId: id,
-      prevValue: counter.value,
-      nextValue: newValue,
-      step,
-    });
-
-    useHistoryStore.getState().pushAction(id, action);
-
-    set({
-      counters: state.counters.map((c) =>
-        c.id === id ? updatedCounter : c
-      ),
-    });
-  },
-
-  /* ---------------------------------
-     VALUE SETTER
-  --------------------------------- */
-  setCounterValue: (id = '', value = 0) => {
-    set((state) => ({
-      counters: state.counters.map((c) =>
-        c.id === id ? { ...c, value } : c
-      ),
-    }));
-  },
-
-  /* ---------------------------------
-     DELETE
-  --------------------------------- */
-  deleteCounter: (id = '') => {
-    set((state) => ({
-      counters: state.counters.filter((c) => c.id !== id),
-    }));
-  },
-
-  /* ---------------------------------
-     CATEGORY HELPERS
-  --------------------------------- */
-  getCategories: () => {
-    const { counters } = get();
-    return Array.from(new Set(counters.map((c) => c.category)));
-  },
-
-  setSelectedCategory: (category = CounterCategoryEnum.GENERAL) =>
-    set({ selectedCategory: category }),
-
-  getFilteredCounters: () => {
-    const { counters, selectedCategory } = get();
-    return counters.filter((c) => c.category === selectedCategory);
-  },
-}));
+    }
+  )
+);
 
 /* ---------------------------------
    HELPERS (PURE)

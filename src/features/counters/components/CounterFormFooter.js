@@ -41,14 +41,13 @@ const styles = {
     padding: 16,
     borderTopWidth: 1,
      paddingBottom: 16,
-    borderTopColor: "#ddd",
+   borderTopColor: "rgba(255,255,255,0.12)",
   },
   row: {
     flexDirection: "row",
     gap: 9,
   },
 };
-
 const getButtonStyle = (primary) => ({
   flex: 1,
   paddingVertical: 12,
@@ -56,8 +55,13 @@ const getButtonStyle = (primary) => ({
   backgroundColor: primary ? "#000" : "#e8e8e8",
   alignItems: "center",
   marginBottom: 5,
-});
 
+  // Added for dark mode visibility (no other visual changes)
+  borderWidth: 1,
+  borderColor: primary
+    ? "rgba(255,255,255,0.25)"  // visible on black button
+    : "rgba(255,255,255,0.15)", // subtle on light gray
+});
 const getTextStyle = (primary) => ({
   color: primary ? "#fff" : "#000",
   fontWeight: "bold",

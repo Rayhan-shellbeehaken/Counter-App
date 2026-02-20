@@ -80,7 +80,6 @@ const renderHeader = (theme) => (
     </Text>
   </>
 );
-
 const renderGoalCard = ({
   counter,
   goal,
@@ -91,14 +90,21 @@ const renderGoalCard = ({
     counter={counter}
     goal={goal}
     isEditing={state.editingCounterId === counter.id}
+
+    // Target value
     targetValue={state.targetValue}
+    onTargetChange={state.setTargetValue}
+
+    // 🔴 CRITICAL FIX: Time limit wiring
+    timeLimit={state.timeLimit}
+    onTimeChange={state.setTimeLimit}
+
     onEdit={() =>
       state.handleEdit({
         counterId: counter.id,
         existingGoal: goal,
       })
     }
-    onTargetChange={state.setTargetValue}
     onSave={() =>
       state.saveGoal({
         counterId: counter.id,
@@ -110,7 +116,6 @@ const renderGoalCard = ({
     }
   />
 );
-
 /* ---------------------------------
    STYLES (THEME-AWARE)
 --------------------------------- */

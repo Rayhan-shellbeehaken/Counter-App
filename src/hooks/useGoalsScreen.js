@@ -1,79 +1,103 @@
 import { useState } from 'react';
-import { useCounterStore } from '@/store/counterStore';
 import { useGoalStore } from '@/store/goalStore';
+import { useCounterStore } from '@/store/counterStore';
 import { createGoal } from '@/models/GoalModel';
 
-const defaultState = {
-  editingCounterId: null,
-  targetValue: '',
-};
-
 export const useGoalsScreen = () => {
-  const counters = useCounterStore((s) => s.counters);
-  const goals = useGoalStore((s) => s.goals);
-  const addGoal = useGoalStore((s) => s.addGoal);
-  const updateGoal = useGoalStore((s) => s.updateGoal);
-  const deleteGoal = useGoalStore((s) => s.deleteGoal);
+  const { goals, addGoal, updateGoal, deleteGoal } = useGoalStore();
+  const counters = useCounterStore((state) => state.counters);
 
-  const [editingCounterId, setEditingCounterId] = useState(
-    defaultState.editingCounterId
-  );
-  const [targetValue, setTargetValue] = useState(
-    defaultState.targetValue
-  );
+  const [editingCounterId, setEditingCounterId] = useState(null);
+  const [targetValue, setTargetValue] = useState('');
+  const [timeLimit, setTimeLimit] = useState('');
 
-  const resetEditor = () => {
-    setEditingCounterId(null);
-    setTargetValue('');
-  };
-
-  const handleEdit = ({
-    counterId = '',
-    existingGoal = null,
-  } = {}) => {
+  /* ---------------------------------
+     EDIT HANDLER
+  --------------------------------- */
+  const handleEdit = ({ counterId = '', existingGoal = null } = {}) => {
     setEditingCounterId(counterId);
-    setTargetValue(
-      existingGoal?.targetValue != null
-        ? String(existingGoal.targetValue)
-        : ''
-    );
+
+    if (existingGoal) {
+      // Pre-fill values when editing
+      setTargetValue(String(existingGoal.targetValue ?? ''));
+      setTimeLimit(
+        existingGoal.timeLimitHours
+          ? String(existingGoal.timeLimitHours)
+          : ''
+      );
+    } else {
+      // New goal
+      setTargetValue('');
+      setTimeLimit('');
+    }
   };
 
-  const saveGoal = ({
-    counterId = '',
-    goal = null,
-  } = {}) => {
-    const numericTarget = Number(targetValue);
-    if (!counterId || numericTarget <= 0) return;
+  /* ---------------------------------
+     SAVE GOAL (CREATE + UPDATE FIX)
+  --------------------------------- */
+  const saveGoal = async ({ counterId = '', goal = null } = {}) => {
+    const parsedTarget = parseInt(targetValue, 10);
+    const parsedTimeLimit = timeLimit
+      ? parseInt(timeLimit, 10)
+      : null;
 
-    switch (Boolean(goal)) {
-      case true:
-        updateGoal(goal.id, { targetValue: numericTarget });
-        break;
-      default:
-        addGoal(
-          createGoal({
-            counterId,
-            targetValue: numericTarget,
-          })
-        );
+    // Validation
+    if (!counterId || isNaN(parsedTarget) || parsedTarget <= 0) {
+      return;
     }
 
-    resetEditor();
+    if (
+      timeLimit &&
+      (isNaN(parsedTimeLimit) || parsedTimeLimit <= 0)
+    ) {
+      return;
+    }
+
+    /* -------------------------------
+       🔴 CASE 1: UPDATE EXISTING GOAL
+    --------------------------------*/
+    if (goal?.id) {
+      await updateGoal(goal.id, {
+        targetValue: parsedTarget,
+        timeLimitHours: parsedTimeLimit,
+        status: goal.status, // keep status
+      });
+    }
+    /* -------------------------------
+       🟢 CASE 2: CREATE NEW GOAL
+    --------------------------------*/
+    else {
+      const newGoal = createGoal({
+        counterId,
+        targetValue: parsedTarget,
+        timeLimitHours: parsedTimeLimit,
+      });
+
+      await addGoal(newGoal);
+    }
+
+    // Reset editor state
+    setEditingCounterId(null);
+    setTargetValue('');
+    setTimeLimit('');
   };
 
-  const removeGoal = (goalId = '') => {
+  /* ---------------------------------
+     DELETE
+  --------------------------------- */
+  const removeGoal = async (goalId = '') => {
     if (!goalId) return;
-    deleteGoal(goalId);
-    resetEditor();
+    await deleteGoal(goalId);
   };
 
   return {
-    counters,
+    counters, // REQUIRED for GoalsScreen mapping
     goals,
     editingCounterId,
     targetValue,
+    timeLimit,
     setTargetValue,
+    setTimeLimit,
     handleEdit,
     saveGoal,
     removeGoal,

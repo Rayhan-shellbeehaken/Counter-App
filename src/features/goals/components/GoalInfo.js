@@ -37,31 +37,48 @@ export default function GoalInfo({
 --------------------------------- */
 
 const renderGoalInfo = ({
-  goal,
+  goal = {},
   onEdit,
   onDelete,
   theme,
-}) => (
-  <View style={getBoxStyle(theme)}>
-    <Text style={getTextStyle(theme)}>
-      🎯 Target: {goal?.targetValue ?? 0}
-    </Text>
+}) => {
+  const hasTimeLimit =
+    goal?.timeLimitHours !== null &&
+    goal?.timeLimitHours !== undefined &&
+    goal?.timeLimitHours > 0;
 
-    <View style={getActionsStyle()}>
-      <TouchableOpacity onPress={onEdit}>
-        <Text style={getEditStyle(theme)}>
-          Edit
-        </Text>
-      </TouchableOpacity>
+  return (
+    <View style={getBoxStyle(theme)}>
+      {/* Target Value */}
+      <Text style={getTargetTextStyle(theme)}>
+        🎯 Target: {goal?.targetValue ?? 0}
+      </Text>
 
-      <TouchableOpacity onPress={onDelete}>
-        <Text style={getDeleteStyle(theme)}>
-          Delete
+      {/* 🔴 NEW: Time Limit Display */}
+      {hasTimeLimit && (
+        <Text style={getTimeTextStyle(theme)}>
+         ⏱ Time Limit: {goal.timeLimitHours} min
+          {goal.timeLimitHours > 1 ? 's' : ''}
         </Text>
-      </TouchableOpacity>
+      )}
+
+      {/* Actions */}
+      <View style={getActionsStyle()}>
+        <TouchableOpacity onPress={onEdit}>
+          <Text style={getEditStyle(theme)}>
+            Edit
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={onDelete}>
+          <Text style={getDeleteStyle(theme)}>
+            Delete
+          </Text>
+        </TouchableOpacity>
+      </View>
     </View>
-  </View>
-);
+  );
+};
 
 /* ---------------------------------
    STYLES (THEME-AWARE)
@@ -69,27 +86,37 @@ const renderGoalInfo = ({
 
 const getBoxStyle = (theme) => ({
   backgroundColor: theme.card,
-  padding: 10,
-  borderRadius: 8,
+  padding: 12,
+  borderRadius: 10,
+  borderWidth: 1,
+  borderColor: theme.border ?? 'rgba(255,255,255,0.08)',
 });
 
-const getTextStyle = (theme) => ({
-  fontWeight: '600',
+const getTargetTextStyle = (theme) => ({
+  fontWeight: '700',
+  fontSize: 15,
   color: theme.text,
+});
+
+const getTimeTextStyle = (theme) => ({
+  marginTop: 4,
+  fontSize: 13,
+  fontWeight: '500',
+  color: theme.mutedText ?? '#888',
 });
 
 const getActionsStyle = () => ({
   flexDirection: 'row',
   justifyContent: 'space-between',
-  marginTop: 6,
+  marginTop: 10,
 });
 
 const getEditStyle = (theme) => ({
-  color: theme.text,
-  fontWeight: '500',
+  color: theme.primary ?? theme.text,
+  fontWeight: '600',
 });
 
 const getDeleteStyle = (theme) => ({
   color: theme.danger ?? '#FF3B30',
-  fontWeight: '500',
+  fontWeight: '600',
 });
