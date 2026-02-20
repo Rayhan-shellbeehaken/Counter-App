@@ -76,12 +76,13 @@ const getLabelStyle = (theme = {}) => ({
   marginBottom: 6,
   color: theme.text,
 });
-
 const getInputStyle = (theme = {}, error = "") => ({
-  borderWidth: 1,
-  borderColor: error ? "#FF3B30" : theme.border,
-  borderRadius: 8,
-  padding: 10,
+  borderWidth: 1.5,
+  borderColor: error
+    ? "#FF3B30"
+    : theme.border ?? "#2A2A2A", // fallback for dark mode
+  borderRadius: 10,
+  padding: 12,
   color: theme.text,
   backgroundColor: theme.card,
 });

@@ -111,11 +111,16 @@ const getRowStyle = () => ({
 
 const getStepButtonStyle = (active, theme = {}) => ({
   flex: 1,
-  padding: 10,
-  borderRadius: 8,
+  padding: 12,
+  borderRadius: 10,
   backgroundColor: active ? theme.text : theme.card,
+  borderWidth: 1.5,
+  borderColor: active
+    ? theme.text
+    : theme.border ?? "#2A2A2A",
   alignItems: "center",
 });
+
 
 const getStepButtonTextStyle = (active, theme = {}) => ({
   color: active ? theme.background : theme.text,

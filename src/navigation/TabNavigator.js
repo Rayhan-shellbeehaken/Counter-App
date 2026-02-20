@@ -21,7 +21,7 @@ export const TabOption = Object.freeze({
 const defaultProps = {
   routeName: TabOption.COUNTER,
   focused: false,
-  color: '#000',
+  color: '#0a0a0a',
   size: 24,
 };
 

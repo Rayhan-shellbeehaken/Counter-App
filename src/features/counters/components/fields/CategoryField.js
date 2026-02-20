@@ -69,9 +69,17 @@ const renderCategoryOption = (category, selected, onSelect, theme) => (
   />
 );
 
-const getContainerStyle = () => ({
-  marginBottom: 5,
+const getContainerStyle = (active, theme = {}) => ({
+  paddingHorizontal: 14,
+  paddingVertical: 8,
+  borderRadius: 20,
+  borderWidth: 1.5,
+  borderColor: active
+    ? theme.text
+    : theme.border ?? "#2A2A2A",
+  backgroundColor: active ? theme.text : theme.card,
 });
+
 
 const getLabelStyle = (theme) => ({
   fontWeight: "bold",

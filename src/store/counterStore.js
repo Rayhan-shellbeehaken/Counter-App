@@ -37,6 +37,28 @@ export const useCounterStore = create((set, get) => ({
   },
 
   /* ---------------------------------
+     UPDATE (NEW - for editing counter properties)
+  --------------------------------- */
+  updateCounter: (id = '', updates = {}) => {
+    if (!id) return;
+
+    const state = get();
+    const counter = state.counters.find((c) => c.id === id);
+    if (!counter) return;
+
+    const updatedCounter = {
+      ...counter,
+      ...updates,
+    };
+
+    set({
+      counters: state.counters.map((c) =>
+        c.id === id ? updatedCounter : c
+      ),
+    });
+  },
+
+  /* ---------------------------------
      INCREMENT
   --------------------------------- */
   increment: (id = '', step = 1) => {
@@ -44,10 +66,7 @@ export const useCounterStore = create((set, get) => ({
     const counter = state.counters.find((c) => c.id === id);
     if (!counter) return;
 
-    const newValue = handleMaxLimitCheck(
-      counter,
-      counter.value + step
-    );
+    const newValue = handleMaxLimitCheck(counter, counter.value + step);
 
     const updatedCounter = {
       ...counter,
@@ -73,9 +92,7 @@ export const useCounterStore = create((set, get) => ({
     evaluateGoalsForCounter({
       counter: updatedCounter,
       analytics: getAnalyticsSnapshot({
-        actions:
-          useHistoryStore.getState().analyticsHistory?.[id] ??
-          [],
+        actions: useHistoryStore.getState().analyticsHistory?.[id] ?? [],
       }),
     });
   },
@@ -88,10 +105,7 @@ export const useCounterStore = create((set, get) => ({
     const counter = state.counters.find((c) => c.id === id);
     if (!counter) return;
 
-    const newValue = handleMinLimitCheck(
-      counter,
-      counter.value - step
-    );
+    const newValue = handleMinLimitCheck(counter, counter.value - step);
 
     const updatedCounter = {
       ...counter,
@@ -140,30 +154,22 @@ export const useCounterStore = create((set, get) => ({
   --------------------------------- */
   getCategories: () => {
     const { counters } = get();
-    return Array.from(
-      new Set(counters.map((c) => c.category))
-    );
+    return Array.from(new Set(counters.map((c) => c.category)));
   },
 
-  setSelectedCategory: (
-    category = CounterCategoryEnum.GENERAL
-  ) => set({ selectedCategory: category }),
+  setSelectedCategory: (category = CounterCategoryEnum.GENERAL) =>
+    set({ selectedCategory: category }),
 
   getFilteredCounters: () => {
     const { counters, selectedCategory } = get();
-    return counters.filter(
-      (c) => c.category === selectedCategory
-    );
+    return counters.filter((c) => c.category === selectedCategory);
   },
 }));
 
 /* ---------------------------------
    HELPERS (PURE)
 --------------------------------- */
-const handleMaxLimitCheck = (
-  counter = {},
-  proposedValue = 0
-) => {
+const handleMaxLimitCheck = (counter = {}, proposedValue = 0) => {
   if (counter?.maxValue == null) return proposedValue;
 
   if (proposedValue > counter.maxValue) {
@@ -177,15 +183,9 @@ const handleMaxLimitCheck = (
   return proposedValue;
 };
 
-const handleMinLimitCheck = (
-  counter = {},
-  proposedValue = 0
-) => {
-  // ✅ DEFAULT MIN VALUE = 0
+const handleMinLimitCheck = (counter = {}, proposedValue = 0) => {
   const minValue =
-    typeof counter?.minValue === 'number'
-      ? counter.minValue
-      : 0;
+    typeof counter?.minValue === 'number' ? counter.minValue : 0;
 
   if (proposedValue < minValue) {
     Alert.alert(

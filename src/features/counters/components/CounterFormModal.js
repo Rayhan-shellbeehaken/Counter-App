@@ -70,5 +70,5 @@ const getScrollStyle = (theme = {}) => ({
 });
 
 const getContentContainerStyle = () => ({
-  paddingBottom: 120, // 🔥 prevents keyboard hiding last fields
+  paddingBottom: 120,  
 });

@@ -21,7 +21,7 @@ const getThemeByMode = (mode = ThemeModeEnum.LIGHT) => {
   switch (mode) {
     case ThemeModeEnum.DARK:
       return {
-        background: "#000",
+        background: "#0e0d0d",
         text: "#fff",
         card: "#1c1c1e",
       };
