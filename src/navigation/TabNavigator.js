@@ -1,74 +1,104 @@
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { createStaticNavigation } from "@react-navigation/native";
-import { Text, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
- 
-import CounterHomeScreen from "@/features/counters/screens/CounterHomeScreen";
- 
+// src/navigation/TabNavigator.js
+
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '@react-navigation/native';
+
+import CounterHomeScreen from '@/features/counters/screens/CounterHomeScreen';
+import AnalyticsScreen from '@/features/analytics/screens/AnalyticsScreen';
+import GoalsScreen from '@/features/goals/screens/GoalsScreen';
+import SettingsScreen from '@/features/settings/screens/SettingsScreen';
+
+const Tab = createBottomTabNavigator();
+
 export const TabOption = Object.freeze({
-  COUNTER: "Counters",
-  ANALYTICS: "Analytics",
-  GOALS: "Goals",
-  SETTINGS: "Settings",
+  COUNTER: 'Counters',
+  ANALYTICS: 'Analytics',
+  GOALS: 'Goals',
+  SETTINGS: 'Settings',
 });
 
- 
-function getTabIcon(routeName, focused) {
+const defaultProps = {
+  routeName: TabOption.COUNTER,
+  focused: false,
+  color: '#0a0a0a',
+  size: 24,
+};
+
+const getTabIcon = (
+  routeName = defaultProps.routeName,
+  focused = defaultProps.focused
+) => {
   switch (routeName) {
     case TabOption.COUNTER:
-      return focused ? "add-circle" : "add-circle-outline";
+      return focused ? 'add-circle' : 'add-circle-outline';
     case TabOption.ANALYTICS:
-      return focused ? "bar-chart" : "bar-chart-outline";
+      return focused ? 'bar-chart' : 'bar-chart-outline';
     case TabOption.GOALS:
-      return focused ? "flag" : "flag-outline";
+      return focused ? 'flag' : 'flag-outline';
     case TabOption.SETTINGS:
-      return focused ? "settings" : "settings-outline";
+      return focused ? 'settings' : 'settings-outline';
     default:
-      return "ellipse-outline";
+      return 'ellipse-outline';
   }
-}
+};
 
-function Placeholder({ route }) {
- 
-  const title = route.params?.title || "Default";
-  return (
-    <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-      <Text>{title}</Text>
-    </View>
-  );
-}
- 
-const BottomTabs = createBottomTabNavigator({
-  screenOptions: ({ route }) => ({
-    tabBarIcon: ({ focused, color, size }) => {
-      const iconName = getTabIcon(route.name, focused);
-      return <Ionicons name={iconName} size={size} color={color} />;
-    },
-    tabBarActiveTintColor: "#000",
-    tabBarInactiveTintColor: "gray",
-    headerShown: false,
-  }),
-  screens: {
-    [TabOption.COUNTER]: {
-      screen: CounterHomeScreen,
-    },
-    [TabOption.ANALYTICS]: {
-      screen: Placeholder,
-      initialParams: { title: "Analytics" },  
-    },
-    [TabOption.GOALS]: {
-      screen: Placeholder,
-      initialParams: { title: "Goals" },
-    },
-    [TabOption.SETTINGS]: {
-      screen: Placeholder,
-      initialParams: { title: "Settings" },
-    },
+const renderTabIcon = (routeName, focused, color, size) => {
+  const iconName = getTabIcon(routeName, focused);
+  return <Ionicons name={iconName} size={size} color={color} />;
+};
+
+const createScreenOptions = ({
+  route = {},
+  colors = {},
+} = {}) => ({
+  tabBarIcon: ({
+    focused = defaultProps.focused,
+    color = defaultProps.color,
+    size = defaultProps.size,
+  }) => renderTabIcon(route.name, focused, color, size),
+
+  tabBarStyle: {
+    backgroundColor: colors.card,     // ✅ makes tab bar visible in dark mode
+    borderTopColor: colors.border,
   },
+
+  tabBarActiveTintColor: colors.primary,
+  tabBarInactiveTintColor: 'gray',
+  headerShown: false,
 });
- 
-export const Navigation = createStaticNavigation(BottomTabs);
- 
+
 export default function TabNavigator() {
-  return <Navigation />;
+  const { colors } = useTheme(); // ✅ ADDITION
+
+  return (
+    <Tab.Navigator
+      screenOptions={(props) =>
+        createScreenOptions({
+          ...props,
+          colors, // ✅ ADDITION
+        })
+      }
+    >
+      <Tab.Screen
+        name={TabOption.COUNTER}
+        component={CounterHomeScreen}
+      />
+
+      <Tab.Screen
+        name={TabOption.ANALYTICS}
+        component={AnalyticsScreen}
+      />
+
+      <Tab.Screen
+        name={TabOption.GOALS}
+        component={GoalsScreen}
+      />
+
+      <Tab.Screen
+        name={TabOption.SETTINGS}
+        component={SettingsScreen}
+      />
+    </Tab.Navigator>
+  );
 }

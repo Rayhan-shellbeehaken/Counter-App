@@ -1,76 +1,135 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const MAX_HISTORY = 10;
+const MAX_HISTORY = 10; // undo/redo cap (unchanged)
 
-export const useHistoryStore = create((set, get) => ({
-  history: {},  
+/* ---------------------------------
+   DEFAULT STRUCTURE
+--------------------------------- */
+const createEmptyHistory = () => ({
+  past: [],      // capped at 10 — for undo/redo only
+  future: [],
+  analyticsLog: [], // unlimited — for analytics only
+});
 
-  initCounter: (counterId) => {
-    set(state => {
-      if (state.history[counterId]) return state;
-      return {
-        history: {
-          ...state.history,
-          [counterId]: { past: [], future: [] }
-        }
-      };
-    });
-  },
+export const useHistoryStore = create(
+  persist(
+    (set, get) => ({
+      /* ---------------------------------
+         STATE
+      --------------------------------- */
+      historyByCounter: {},
 
-  pushAction: (counterId, action) => {
-    set(state => {
-      const counterHistory = state.history[counterId] || { past: [], future: [] };
-      const newPast = [...counterHistory.past, action].slice(-MAX_HISTORY);
+      /* ---------------------------------
+         INIT
+      --------------------------------- */
+      initCounter: (counterId = '') => {
+        if (!counterId) return;
 
-      return {
-        history: {
-          ...state.history,
-          [counterId]: {
-            past: newPast,
-            future: []
-          }
-        }
-      };
-    });
-  },
+        set((state) => {
+          if (state.historyByCounter[counterId]) return state;
 
-  undo: (counterId) => {
-    const { history } = get();
-    const counterHistory = history[counterId];
-    if (!counterHistory || counterHistory.past.length === 0) return null;
+          return {
+            historyByCounter: {
+              ...state.historyByCounter,
+              [counterId]: createEmptyHistory(),
+            },
+          };
+        });
+      },
 
-    const lastAction = counterHistory.past[counterHistory.past.length - 1];
+      /* ---------------------------------
+         PUSH ACTION (SOURCE OF TRUTH)
+      --------------------------------- */
+      pushAction: (counterId = '', action = null) => {
+        if (!counterId || !action) return;
 
-    set(state => ({
-      history: {
-        ...state.history,
-        [counterId]: {
-          past: counterHistory.past.slice(0, -1),
-          future: [lastAction, ...counterHistory.future]
-        }
-      }
-    }));
+        set((state) => {
+          const counterHistory =
+            state.historyByCounter[counterId] ?? createEmptyHistory();
 
-    return lastAction;
-  },
+          return {
+            historyByCounter: {
+              ...state.historyByCounter,
+              [counterId]: {
+                // undo/redo past stays capped at 10
+                past: [...counterHistory.past, action].slice(-MAX_HISTORY),
+                future: [],
+                // analyticsLog grows forever — never sliced
+                analyticsLog: [
+                  ...(counterHistory.analyticsLog ?? []),
+                  action,
+                ],
+              },
+            },
+          };
+        });
+      },
 
-  redo: (counterId) => {
-    const { history } = get();
-    const counterHistory = history[counterId];
-    if (!counterHistory || counterHistory.future.length === 0) return null;
+      /* ---------------------------------
+         UNDO
+      --------------------------------- */
+      undo: (counterId = '') => {
+        if (!counterId) return null;
 
-    const nextAction = counterHistory.future[0];
+        const counterHistory =
+          get().historyByCounter[counterId] ?? createEmptyHistory();
 
-    set(state => ({
-      history: {
-        ...state.history,
-        [counterId]: {
-          past: [...counterHistory.past, nextAction].slice(-MAX_HISTORY),
-          future: counterHistory.future.slice(1)
-        }
-      }
-    }));
+        if (counterHistory.past.length === 0) return null;
 
-    return nextAction;
-  }
-}));
+        const lastAction =
+          counterHistory.past[counterHistory.past.length - 1];
+
+        set((state) => ({
+          historyByCounter: {
+            ...state.historyByCounter,
+            [counterId]: {
+              past: counterHistory.past.slice(0, -1),
+              future: [lastAction, ...counterHistory.future],
+              analyticsLog: counterHistory.analyticsLog ?? [],
+            },
+          },
+        }));
+
+        return lastAction;
+      },
+
+      /* ---------------------------------
+         REDO
+      --------------------------------- */
+      redo: (counterId = '') => {
+        if (!counterId) return null;
+
+        const counterHistory =
+          get().historyByCounter[counterId] ?? createEmptyHistory();
+
+        if (counterHistory.future.length === 0) return null;
+
+        const nextAction = counterHistory.future[0];
+
+        set((state) => ({
+          historyByCounter: {
+            ...state.historyByCounter,
+            [counterId]: {
+              past: [...counterHistory.past, nextAction].slice(-MAX_HISTORY),
+              future: counterHistory.future.slice(1),
+              analyticsLog: counterHistory.analyticsLog ?? [],
+            },
+          },
+        }));
+
+        return nextAction;
+      },
+    }),
+    {
+      name: 'history-storage', // AsyncStorage key
+      storage: createJSONStorage(() => AsyncStorage),
+
+      // Persist ONLY serializable history data
+      partialize: (state) => ({
+        historyByCounter: state.historyByCounter,
+      }),
+    }
+  )
+);
