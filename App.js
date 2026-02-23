@@ -1,36 +1,50 @@
-import React, { useEffect } from "react";
+import React, { useEffect } from 'react';
+import { NavigationContainer } from '@react-navigation/native';
 
-import { useThemeStore } from "@/store/themeStore";
-import RootNavigator from "@/navigation/RootNavigator";
-import { requestNotificationPermission } from "@/services/notificationService";
+import { AuthProvider } from '@/contexts/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
+import { useThemeStore } from '@/store/themeStore';
+import { getNavigationTheme } from '@/theme/navigationTheme';
 
-const defaultProps = {};
+import AuthNavigator from '@/navigation/AuthNavigator';
+import RootNavigator from '@/navigation/RootNavigator';
 
-export default function App({} = defaultProps) {
+/* ---------------------------------
+   MAIN APP COMPONENT
+--------------------------------- */
+
+export default function App() {
+  const mode = useThemeStore((s) => s.mode);
   const isHydrated = useThemeStore((s) => s.isHydrated);
   const hydrateTheme = useThemeStore((s) => s.hydrateTheme);
 
   useEffect(() => {
-    const initApp = async () => {
-      // Hydrate theme (existing logic)
-      hydrateTheme();
-
-      // 🔴 CRITICAL: Request notification permission on app start
-      await requestNotificationPermission();
-    };
-
-    initApp();
+    hydrateTheme();
   }, [hydrateTheme]);
 
-  return renderApp({
-    isHydrated,
-  });
-}
-
-const renderApp = ({ isHydrated = false } = {}) => {
   if (!isHydrated) {
     return null;
   }
 
-  return <RootNavigator />;
-};
+  return (
+    <AuthProvider>
+      <NavigationContainer theme={getNavigationTheme(mode)}>
+        <AppNavigator />
+      </NavigationContainer>
+    </AuthProvider>
+  );
+}
+
+/* ---------------------------------
+   AUTH-AWARE NAVIGATOR
+--------------------------------- */
+
+function AppNavigator() {
+  const { isAuthenticated, loading } = useAuth();
+
+  if (loading) {
+    return null;
+  }
+
+  return isAuthenticated ? <RootNavigator /> : <AuthNavigator />;
+}
