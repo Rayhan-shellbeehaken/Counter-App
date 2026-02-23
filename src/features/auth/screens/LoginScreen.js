@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -8,15 +8,25 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
-} from "react-native";
-import { useForm, Controller } from "react-hook-form";
+  Alert,
+} from 'react-native';
+import { useForm, Controller } from 'react-hook-form';
 
-import { useAuth } from "@/hooks/useAuth";
-import { useTheme } from "@/hooks/useTheme";
+import { useAuth } from '@/hooks/useAuth';
+import { useTheme } from '@/hooks/useTheme';
+
+/* ---------------------------------
+   DEFAULTS
+--------------------------------- */
 
 const defaultProps = {
   navigation: {},
 };
+
+/* ---------------------------------
+   COMPONENT
+--------------------------------- */
+
 
 export default function LoginScreen({
   navigation = defaultProps.navigation,
@@ -24,7 +34,7 @@ export default function LoginScreen({
   const theme = useTheme();
   const { login } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
 
   const {
     control,
@@ -32,8 +42,8 @@ export default function LoginScreen({
     formState: { errors },
   } = useForm({
     defaultValues: {
-      email: "",
-      password: "",
+      email: '',
+      password: '',
     },
   });
 
@@ -41,23 +51,42 @@ export default function LoginScreen({
     await handleLogin(data);
   };
 
-  const handleLogin = async ({ email = "", password = "" } = {}) => {
-    setError("");
+  const handleLogin = async ({ email = '', password = '' } = {}) => {
+    setError('');
     setLoading(true);
 
-    const result = await login(email, password);
+    try {
+      const result = await login(email, password);
 
-    if (!result.success) {
-      setError(result.error);
+      if (!result?.success) {
+        const errorMessage =
+          result?.error ?? 'Invalid email or password';
+
+        setError(errorMessage);
+        setLoading(false);
+
+        Alert.alert('Login Failed', errorMessage, [
+          { text: 'OK' },
+        ]);
+        return;
+      }
+
       setLoading(false);
-      return;
-    }
+      // Navigation handled by auth state change
+    } catch {
+      const errorMsg =
+        'An unexpected error occurred. Please try again.';
 
-    setLoading(false);
+      setError(errorMsg);
+      setLoading(false);
+
+      Alert.alert('Error', errorMsg);
+    }
   };
 
+ 
   const handleNavigateToSignup = () => {
-    navigation.navigate("Signup");
+    navigation.navigate('Signup');
   };
 
   return renderLoginScreen({
@@ -71,17 +100,21 @@ export default function LoginScreen({
   });
 }
 
+/* ---------------------------------
+   RENDER
+--------------------------------- */
+
 const renderLoginScreen = ({
   theme = {},
   control = {},
   errors = {},
-  error = "",
+  error = '',
   loading = false,
   onSubmit = () => {},
   onNavigateToSignup = () => {},
 } = {}) => (
   <KeyboardAvoidingView
-    behavior={Platform.OS === "ios" ? "padding" : "height"}
+    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     style={getContainerStyle(theme)}
   >
     <ScrollView
@@ -106,7 +139,7 @@ const renderForm = ({
   theme = {},
   control = {},
   errors = {},
-  error = "",
+  error = '',
   loading = false,
   onSubmit = () => {},
 } = {}) => (
@@ -118,24 +151,28 @@ const renderForm = ({
   </View>
 );
 
-const renderEmailInput = ({ theme = {}, control = {}, errors = {} } = {}) => (
+const renderEmailInput = ({
+  theme = {},
+  control = {},
+  errors = {},
+} = {}) => (
   <View style={getInputContainerStyle()}>
     <Text style={getLabelStyle(theme)}>Email</Text>
     <Controller
       control={control}
       name="email"
       rules={{
-        required: "Email is required",
+        required: 'Email is required',
         pattern: {
           value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-          message: "Invalid email address",
+          message: 'Invalid email address',
         },
       }}
       render={({ field: { onChange, onBlur, value } }) => (
         <TextInput
           style={getInputStyle(theme, !!errors.email)}
           placeholder="Enter your email"
-          placeholderTextColor={theme.mutedText ?? "#888"}
+          placeholderTextColor={theme.mutedText ?? '#888'}
           value={value}
           onChangeText={onChange}
           onBlur={onBlur}
@@ -160,17 +197,17 @@ const renderPasswordInput = ({
       control={control}
       name="password"
       rules={{
-        required: "Password is required",
+        required: 'Password is required',
         minLength: {
           value: 6,
-          message: "Password must be at least 6 characters",
+          message: 'Password must be at least 6 characters',
         },
       }}
       render={({ field: { onChange, onBlur, value } }) => (
         <TextInput
           style={getInputStyle(theme, !!errors.password)}
           placeholder="Enter your password"
-          placeholderTextColor={theme.mutedText ?? "#888"}
+          placeholderTextColor={theme.mutedText ?? '#888'}
           value={value}
           onChangeText={onChange}
           onBlur={onBlur}
@@ -187,15 +224,20 @@ const renderPasswordInput = ({
 const renderFieldError = ({ error = null } = {}) => {
   if (!error) return null;
 
-  return <Text style={getFieldErrorStyle()}>{error.message}</Text>;
+  return (
+    <Text style={getFieldErrorStyle()}>
+      ⚠️ {error.message}
+    </Text>
+  );
 };
 
-const renderErrorMessage = ({ error = "" } = {}) => {
+const renderErrorMessage = ({ error = '' } = {}) => {
   if (!error) return null;
 
   return (
     <View style={getErrorContainerStyle()}>
-      <Text style={getErrorTextStyle()}>❌ {error}</Text>
+      <Text style={getErrorIconStyle()}>❌</Text>
+      <Text style={getErrorTextStyle()}>{error}</Text>
     </View>
   );
 };
@@ -215,13 +257,18 @@ const renderSubmitButton = ({
   </TouchableOpacity>
 );
 
-const renderLoadingIndicator = () => <ActivityIndicator color="#fff" />;
+const renderLoadingIndicator = () => (
+  <ActivityIndicator color="#fff" />
+);
 
 const renderSubmitText = ({ theme = {} } = {}) => (
   <Text style={getSubmitButtonTextStyle(theme)}>Sign In</Text>
 );
 
-const renderFooter = ({ theme = {}, onNavigateToSignup = () => {} } = {}) => (
+const renderFooter = ({
+  theme = {},
+  onNavigateToSignup = () => {},
+} = {}) => (
   <View style={getFooterStyle()}>
     <Text style={getFooterTextStyle(theme)}>Don't have an account?</Text>
     <TouchableOpacity onPress={onNavigateToSignup}>
@@ -230,6 +277,10 @@ const renderFooter = ({ theme = {}, onNavigateToSignup = () => {} } = {}) => (
   </View>
 );
 
+/* ---------------------------------
+   STYLES
+--------------------------------- */
+
 const getContainerStyle = (theme = {}) => ({
   flex: 1,
   backgroundColor: theme.background,
@@ -237,25 +288,25 @@ const getContainerStyle = (theme = {}) => ({
 
 const getScrollContainerStyle = () => ({
   flexGrow: 1,
-  justifyContent: "center",
+  justifyContent: 'center',
   padding: 20,
 });
 
 const getHeaderStyle = () => ({
   marginBottom: 40,
-  alignItems: "center",
+  alignItems: 'center',
 });
 
 const getTitleStyle = (theme = {}) => ({
   fontSize: 32,
-  fontWeight: "bold",
+  fontWeight: 'bold',
   color: theme.text,
   marginBottom: 8,
 });
 
 const getSubtitleStyle = (theme = {}) => ({
   fontSize: 16,
-  color: theme.mutedText ?? "#888",
+  color: theme.mutedText ?? '#888',
 });
 
 const getFormContainerStyle = () => ({
@@ -268,14 +319,14 @@ const getInputContainerStyle = () => ({
 
 const getLabelStyle = (theme = {}) => ({
   fontSize: 14,
-  fontWeight: "600",
+  fontWeight: '600',
   color: theme.text,
   marginBottom: 8,
 });
 
 const getInputStyle = (theme = {}, hasError = false) => ({
-  borderWidth: 1,
-  borderColor: hasError ? "#ff4444" : (theme.border ?? "#ddd"),
+  borderWidth: 2,
+  borderColor: hasError ? '#ff4444' : (theme.border ?? '#ddd'),
   borderRadius: 12,
   padding: 14,
   fontSize: 16,
@@ -284,56 +335,73 @@ const getInputStyle = (theme = {}, hasError = false) => ({
 });
 
 const getFieldErrorStyle = () => ({
-  color: "#ff4444",
-  fontSize: 12,
-  marginTop: 4,
+  color: '#ff4444',
+  fontSize: 13,
+  marginTop: 6,
   marginLeft: 4,
+  fontWeight: '600',
 });
 
 const getErrorContainerStyle = () => ({
-  backgroundColor: "rgba(255, 68, 68, 0.1)",
-  borderWidth: 1,
-  borderColor: "#ff4444",
-  borderRadius: 8,
-  padding: 12,
+  flexDirection: 'row',
+  alignItems: 'center',
+  backgroundColor: '#ff4444',
+  borderRadius: 12,
+  padding: 14,
   marginBottom: 16,
+  shadowColor: '#ff4444',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.3,
+  shadowRadius: 4,
+  elevation: 4,
+});
+
+const getErrorIconStyle = () => ({
+  fontSize: 20,
+  marginRight: 10,
 });
 
 const getErrorTextStyle = () => ({
-  color: "#ff4444",
+  flex: 1,
+  color: '#fff',
   fontSize: 14,
-  textAlign: "center",
+  fontWeight: '600',
 });
 
 const getSubmitButtonStyle = (theme = {}, loading = false) => ({
-  backgroundColor: loading ? theme.mutedText : (theme.primary ?? "#007AFF"),
+  backgroundColor: loading ? theme.mutedText : (theme.primary ?? '#007AFF'),
   paddingVertical: 16,
   borderRadius: 12,
-  alignItems: "center",
+  alignItems: 'center',
   opacity: loading ? 0.7 : 1,
+  shadowColor: theme.primary ?? '#007AFF',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.3,
+  shadowRadius: 4,
+  elevation: 3,
 });
 
 const getSubmitButtonTextStyle = (theme = {}) => ({
-  color: "#fff",
+  color: '#fff',
   fontSize: 16,
-  fontWeight: "bold",
+  fontWeight: 'bold',
 });
 
 const getFooterStyle = () => ({
-  flexDirection: "row",
-  justifyContent: "center",
-  alignItems: "center",
+  flexDirection: 'row',
+  justifyContent: 'center',
+  alignItems: 'center',
   marginTop: 24,
 });
 
 const getFooterTextStyle = (theme = {}) => ({
   fontSize: 14,
-  color: theme.mutedText ?? "#888",
+  color: theme.mutedText ?? '#888',
   marginRight: 4,
 });
 
 const getFooterLinkStyle = (theme = {}) => ({
   fontSize: 14,
-  fontWeight: "bold",
-  color: theme.primary ?? "#007AFF",
+  fontWeight: 'bold',
+  color: theme.primary ?? '#007AFF',
 });
