@@ -5,26 +5,27 @@ import Constants from 'expo-constants';
 import { NotificationTypeEnum } from '@/enums/NotificationEnums';
 
 /* ---------------------------------
-   ENV CHECK (EXPO GO LIMITATION)
+   ENV CHECK
 --------------------------------- */
 
 const isExpoGo = Constants.appOwnership === 'expo';
 
 /* ---------------------------------
-   NOTIFICATION HANDLER (SDK 53 SAFE)
+   NOTIFICATION HANDLER
+   Must be set at module level (before any scheduling)
 --------------------------------- */
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
+    shouldShowList:   true,
+    shouldPlaySound:  true,
+    shouldSetBadge:   false,
   }),
 });
 
 /* ---------------------------------
-   ANDROID CHANNEL (REQUIRED)
+   ANDROID CHANNEL
 --------------------------------- */
 
 const createAndroidChannel = async () => {
@@ -32,10 +33,10 @@ const createAndroidChannel = async () => {
 
   try {
     await Notifications.setNotificationChannelAsync('goal-reminders', {
-      name: 'Goal Reminders',
-      importance: Notifications.AndroidImportance.HIGH,
+      name:             'Goal Reminders',
+      importance:       Notifications.AndroidImportance.HIGH,
       vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#4cc9f0',
+      lightColor:       '#4cc9f0',
     });
   } catch (error) {
     console.warn('Channel creation failed:', error);
@@ -43,7 +44,7 @@ const createAndroidChannel = async () => {
 };
 
 /* ---------------------------------
-   PERMISSION MANAGEMENT
+   PERMISSION
 --------------------------------- */
 
 export const requestNotificationPermission = async () => {
@@ -54,164 +55,176 @@ export const requestNotificationPermission = async () => {
     let finalStatus = existingStatus;
 
     if (existingStatus !== 'granted') {
-      const { status } =
-        await Notifications.requestPermissionsAsync();
+      const { status } = await Notifications.requestPermissionsAsync();
       finalStatus = status;
     }
 
     const isGranted = finalStatus === 'granted';
 
     if (!isGranted) {
-      console.warn('Notification permission denied');
+      console.warn('⚠️ Notification permission denied');
     }
 
     return isGranted;
   } catch (error) {
-    console.error(
-      'Error requesting notification permission:',
-      error
-    );
+    console.error('Error requesting notification permission:', error);
     return false;
   }
 };
 
 /* ---------------------------------
-   SCHEDULE GOAL REMINDERS (MINUTES MODE)
+   SCHEDULE GOAL REMINDERS
+   Schedules 2 notifications:
+     1. Half-time warning  (timeLimitHours / 2)
+     2. Deadline reminder  (timeLimitHours)
+   Returns array of notificationIds to store on the goal.
 --------------------------------- */
 
 export const scheduleGoalReminders = async (goal = {}) => {
-  // 🚫 Expo Go cannot trigger notifications (SDK 53 limitation)
   if (isExpoGo) {
-    console.warn(
-      'Notifications disabled in Expo Go. Use development build.'
-    );
+    console.warn('Notifications disabled in Expo Go. Use a development build.');
     return [];
   }
 
-  if (!shouldScheduleReminders(goal)) {
-    console.log('Skipping reminders: invalid goal config');
+  if (!isValidGoalForScheduling(goal)) {
+    console.log('Skipping reminders: goal missing timeLimitHours or targetValue');
     return [];
   }
 
   await createAndroidChannel();
 
   const hasPermission = await requestNotificationPermission();
-  if (!hasPermission) {
-    return [];
-  }
+  if (!hasPermission) return [];
 
-  // Cancel old notifications (prevents duplicates)
+  // Cancel any existing notifications for this goal first
   if (goal?.notificationIds?.length) {
     await cancelGoalNotifications(goal);
   }
 
-  const notificationIds = await scheduleSingleNotification(goal);
-  return notificationIds;
+  const ids = await scheduleHalfTimeAndDeadline(goal);
+
+  console.log(`📅 Scheduled ${ids.length} notification(s) for goal ${goal.id}`);
+  return ids;
 };
 
-const shouldScheduleReminders = (goal = {}) => {
-  const hasTime =
-    goal?.timeLimitHours && goal.timeLimitHours > 0;
-  const hasTarget =
-    goal?.targetValue && goal.targetValue > 0;
-
-  return hasTime && hasTarget;
-};
+const isValidGoalForScheduling = (goal = {}) =>
+  goal?.timeLimitHours > 0 && goal?.targetValue > 0;
 
 /* ---------------------------------
-   SINGLE NOTIFICATION (NO SPAM)
-   Treat timeLimitHours as MINUTES (for testing)
+   HALF-TIME + DEADLINE SCHEDULER
 --------------------------------- */
 
-const scheduleSingleNotification = async (goal = {}) => {
-  const minutes = goal?.timeLimitHours ?? 0;
+const scheduleHalfTimeAndDeadline = async (goal = {}) => {
+  const totalHours  = goal.timeLimitHours;
+  const halfHours   = totalHours / 2;
 
-  if (!minutes || minutes <= 0) {
-    return [];
-  }
-
-  try {
-    const notificationId = await scheduleNotification({
+  const results = await Promise.allSettled([
+    scheduleOneNotification({
       goal,
-      minutesFromNow: minutes,
-    });
+      hoursFromNow: halfHours,
+      type:         NotificationTypeEnum.GOAL_HALF_TIME,
+      title:        '⏳ Halfway There!',
+      body:         buildHalfTimeBody(goal),
+    }),
+    scheduleOneNotification({
+      goal,
+      hoursFromNow: totalHours,
+      type:         NotificationTypeEnum.GOAL_DEADLINE,
+      title:        '⌛ Time\'s Up!',
+      body:         buildDeadlineBody(goal),
+    }),
+  ]);
 
-    return notificationId ? [notificationId] : [];
-  } catch (error) {
-    console.error('Failed to schedule notification:', error);
-    return [];
-  }
+  return results
+    .filter((r) => r.status === 'fulfilled' && r.value)
+    .map((r) => r.value);
 };
 
 /* ---------------------------------
-   CORE SCHEDULER (FIXED - MISSING BEFORE)
+   CORE SCHEDULER
 --------------------------------- */
 
-const scheduleNotification = async ({
-  goal = {},
-  minutesFromNow = 1,
+const scheduleOneNotification = async ({
+  goal        = {},
+  hoursFromNow = 1,
+  type        = NotificationTypeEnum.GOAL_REMINDER,
+  title       = '🎯 Goal Reminder',
+  body        = '',
 } = {}) => {
   try {
-    const trigger = buildTrigger(minutesFromNow);
-    const content = buildNotificationContent(goal);
+    const seconds = hoursFromNow * 60 * 60;
 
-    const notificationId =
-      await Notifications.scheduleNotificationAsync({
-        content,
-        trigger,
-      });
+    const notificationId = await Notifications.scheduleNotificationAsync({
+      content: {
+        title,
+        body,
+        sound: 'default',
+        data: {
+          type,
+          goalId:    goal.id,
+          counterId: goal.counterId,
+        },
+        ...(Platform.OS === 'android' && {
+          channelId: 'goal-reminders',
+          priority:  'high',
+        }),
+      },
+      trigger: {
+        type:    Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+        seconds,
+        repeats: false,
+      },
+    });
 
-    console.log(
-      `Notification scheduled in ${minutesFromNow} minute(s):`,
-      notificationId
-    );
-
+    console.log(`✅ [${type}] scheduled in ${hoursFromNow}h → id: ${notificationId}`);
     return notificationId;
   } catch (error) {
-    console.error('Error scheduling notification:', error);
+    console.error(`❌ Failed to schedule [${type}]:`, error);
     return null;
   }
 };
 
 /* ---------------------------------
-   NOTIFICATION CONTENT
+   IMMEDIATE NOTIFICATION
+   Used for goal completion (fires instantly)
 --------------------------------- */
 
-const buildNotificationContent = (goal = {}) => ({
-  title: '🎯 Goal Reminder',
-  body: buildNotificationBody(goal),
-  sound: 'default',
-  badge: 1,
-  data: {
-    type: NotificationTypeEnum.GOAL_REMINDER,
-    goalId: goal.id,
-    counterId: goal.counterId,
-  },
-  ...(Platform.OS === 'android' && {
-    channelId: 'goal-reminders',
-    priority: 'high',
-  }),
-});
+export const showImmediateNotification = async ({
+  title = '🎉 Goal Completed!',
+  body  = '',
+  data  = {},
+} = {}) => {
+  if (isExpoGo) {
+    console.warn('Immediate notifications do not work in Expo Go (SDK 53).');
+    return null;
+  }
 
-const buildNotificationBody = (goal = {}) => {
-  const targetValue = goal?.targetValue ?? 0;
-  const minutes = goal?.timeLimitHours ?? 0; // minutes mode for testing
+  try {
+    await createAndroidChannel();
 
-  return `Target ${targetValue} — Reminder in ${minutes} min`;
-};
+    const hasPermission = await requestNotificationPermission();
+    if (!hasPermission) return null;
 
-/* ---------------------------------
-   SDK 53 TRIGGER (MINUTES)
---------------------------------- */
+    const notificationId = await Notifications.scheduleNotificationAsync({
+      content: {
+        title,
+        body,
+        sound: 'default',
+        data:  { type: NotificationTypeEnum.GOAL_COMPLETED, ...data },
+        ...(Platform.OS === 'android' && {
+          channelId: 'goal-reminders',
+          priority:  'high',
+        }),
+      },
+      trigger: null, // null = fire immediately
+    });
 
-const buildTrigger = (minutesFromNow = 1) => {
-  const seconds = minutesFromNow * 60;
-
-  return {
-    type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-    seconds,
-    repeats: false,
-  };
+    console.log('🎉 Completion notification fired:', notificationId);
+    return notificationId;
+  } catch (error) {
+    console.error('Error showing immediate notification:', error);
+    return null;
+  }
 };
 
 /* ---------------------------------
@@ -219,52 +232,27 @@ const buildTrigger = (minutesFromNow = 1) => {
 --------------------------------- */
 
 export const cancelGoalNotifications = async (goal = {}) => {
-  const notificationIds = goal?.notificationIds ?? [];
-
-  if (!notificationIds.length) return;
+  const ids = goal?.notificationIds ?? [];
+  if (!ids.length) return;
 
   await Promise.allSettled(
-    notificationIds.map((id) =>
-      Notifications.cancelScheduledNotificationAsync(id)
-    )
+    ids.map((id) => Notifications.cancelScheduledNotificationAsync(id))
   );
+
+  console.log(`🗑️ Cancelled ${ids.length} notification(s) for goal ${goal.id}`);
 };
 
 /* ---------------------------------
-   DEBUG HELPERS
+   NOTIFICATION BODY BUILDERS
 --------------------------------- */
 
-export const showImmediateNotification = async ({
-  title = 'Test Notification',
-  body = 'If you see this, notifications work.',
-  data = {},
-} = {}) => {
-  if (isExpoGo) {
-    console.warn(
-      'Immediate notifications do not work in Expo Go (SDK 53).'
-    );
-    return null;
-  }
+const buildHalfTimeBody = (goal = {}) => {
+  const hours  = goal?.timeLimitHours ?? 0;
+  const target = goal?.targetValue    ?? 0;
+  return `Half your time is up (${hours / 2}h passed). Still aiming for ${target}?`;
+};
 
-  try {
-    const hasPermission =
-      await requestNotificationPermission();
-    if (!hasPermission) return null;
-
-    return await Notifications.scheduleNotificationAsync({
-      content: {
-        title,
-        body,
-        sound: 'default',
-        data,
-      },
-      trigger: null,
-    });
-  } catch (error) {
-    console.error(
-      'Error showing immediate notification:',
-      error
-    );
-    return null;
-  }
+const buildDeadlineBody = (goal = {}) => {
+  const target = goal?.targetValue ?? 0;
+  return `Time's up! Did you reach your target of ${target}?`;
 };

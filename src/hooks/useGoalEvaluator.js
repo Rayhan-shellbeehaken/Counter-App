@@ -2,31 +2,29 @@ import { useGoalStore } from '@/store/goalStore';
 import { evaluateGoal } from '@/services/goalService';
 import { GoalStatusEnum } from '@/enums/GoalEnums';
 import { showGoalCompletedNotification } from '@/services/goalNotificationService';
-import { showImmediateNotification } from '@/services/notificationService';
 
 /* ---------------------------------
    DEFAULTS
 --------------------------------- */
 
 const defaultParams = {
-  counter: null,
+  counter:   null,
   analytics: null,
 };
 
 /* ---------------------------------
    EVALUATE GOALS FOR COUNTER
+   Called on every increment from counterStore.
 --------------------------------- */
 
 export const evaluateGoalsForCounter = async ({
-  counter = defaultParams.counter,
+  counter   = defaultParams.counter,
   analytics = defaultParams.analytics,
 } = {}) => {
-  if (!counter || !counter.id) {
-    return;
-  }
+  if (!counter?.id) return;
 
-  const state = useGoalStore.getState();
-  const goals = state?.goals ?? [];
+  const state        = useGoalStore.getState();
+  const goals        = state?.goals        ?? [];
   const markCompleted = state?.markCompleted ?? (() => {});
 
   const activeGoals = goals.filter((goal) =>
@@ -48,56 +46,22 @@ export const evaluateGoalsForCounter = async ({
 --------------------------------- */
 
 const isActiveGoalForCounter = (goal = {}, counter = {}) =>
-  goal?.counterId === counter?.id && goal?.status === GoalStatusEnum.ACTIVE;
+  goal?.counterId === counter?.id &&
+  goal?.status    === GoalStatusEnum.ACTIVE;
 
 const handleGoalEvaluation = async ({
-  goal = null,
-  counter = null,
-  analytics = null,
+  goal          = null,
+  counter       = null,
+  analytics     = null,
   markCompleted = () => {},
 } = {}) => {
-  const resultStatus = evaluateGoal({
-    goal,
-    counter,
-    analytics,
-  });
+  const resultStatus = evaluateGoal({ goal, counter, analytics });
 
-  if (resultStatus !== GoalStatusEnum.COMPLETED) {
-    return;
-  }
+  if (resultStatus !== GoalStatusEnum.COMPLETED) return;
 
-  // Mark as completed (this will also cancel notifications via goalStore)
+  // 1. Mark completed in store (also cancels scheduled notifications)
   await markCompleted(goal.id);
 
-  // Show completion notification
-  await showCompletionNotification({ goal, counter });
-
-  // Legacy support for existing goalNotificationService
-  if (typeof showGoalCompletedNotification === 'function') {
-    showGoalCompletedNotification({ goal, counter });
-  }
-};
-
-const showCompletionNotification = async ({
-  goal = {},
-  counter = {},
-} = {}) => {
-  const title = '🎉 Goal Completed!';
-  const body = buildCompletionMessage(goal, counter);
-
-  await showImmediateNotification({
-    title,
-    body,
-    data: {
-      goalId: goal.id,
-      counterId: counter.id,
-    },
-  });
-};
-
-const buildCompletionMessage = (goal = {}, counter = {}) => {
-  const counterName = counter?.name ?? 'Counter';
-  const targetValue = goal?.targetValue ?? 0;
-
-  return `${counterName} reached ${targetValue}! Great job!`;
+  // 2. Fire immediate push notification
+  await showGoalCompletedNotification({ goal, counter });
 };

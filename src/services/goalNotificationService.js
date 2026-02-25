@@ -1,14 +1,24 @@
-import { Alert } from 'react-native';
+import { showImmediateNotification } from '@/services/notificationService';
 
-export const showGoalCompletedNotification = ({
-  goal = {},
+/* ---------------------------------
+   GOAL COMPLETED NOTIFICATION
+   Replaces the old Alert-based version.
+   Called from useGoalEvaluator when a goal is marked completed.
+--------------------------------- */
+
+export const showGoalCompletedNotification = async ({
+  goal    = {},
   counter = {},
 } = {}) => {
-  const counterName = counter?.name ?? 'Counter';
-  const target = goal?.targetValue ?? 0;
+  const counterName = counter?.name    ?? 'Counter';
+  const target      = goal?.targetValue ?? 0;
 
-  Alert.alert(
-    '🎉 Goal Completed',
-    `${counterName} reached its target (${target})`
-  );
+  await showImmediateNotification({
+    title: '🎉 Goal Completed!',
+    body:  `${counterName} reached its target of ${target}. Great work!`,
+    data: {
+      goalId:    goal?.id,
+      counterId: counter?.id,
+    },
+  });
 };
