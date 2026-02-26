@@ -2,19 +2,20 @@ import React from 'react';
 import { View, TextInput, TouchableOpacity, Text } from 'react-native';
 
 import { useTheme } from '@/hooks/useTheme';
-import { useCounterStore } from '@/store/counterStore';
 
 /* ---------------------------------
    DEFAULTS
 --------------------------------- */
 
 const defaultProps = {
-  value: '',
-  timeLimit: '', // NEW
-  previousValue: null,
-  onChange: () => {},
-  onTimeChange: () => {}, // NEW
-  onSave: () => {},
+  value:            '',
+  timeLimitHours:   '',
+  timeLimitMinutes: '',
+  previousValue:    null,
+  onChange:         () => {},
+  onHoursChange:    () => {},
+  onMinutesChange:  () => {},
+  onSave:           () => {},
 };
 
 /* ---------------------------------
@@ -22,25 +23,27 @@ const defaultProps = {
 --------------------------------- */
 
 export default function GoalEditor({
-  value = defaultProps.value,
-  timeLimit = defaultProps.timeLimit,
-  previousValue = defaultProps.previousValue,
-  onChange = defaultProps.onChange,
-  onTimeChange = defaultProps.onTimeChange,
-  onSave = defaultProps.onSave,
+  value            = defaultProps.value,
+  timeLimitHours   = defaultProps.timeLimitHours,
+  timeLimitMinutes = defaultProps.timeLimitMinutes,
+  previousValue    = defaultProps.previousValue,
+  onChange         = defaultProps.onChange,
+  onHoursChange    = defaultProps.onHoursChange,
+  onMinutesChange  = defaultProps.onMinutesChange,
+  onSave           = defaultProps.onSave,
 }) {
   const theme = useTheme();
-  const counters = useCounterStore((state) => state.counters ?? []);
 
   return renderGoalEditor({
     value,
-    timeLimit,
+    timeLimitHours,
+    timeLimitMinutes,
     previousValue,
     onChange,
-    onTimeChange,
+    onHoursChange,
+    onMinutesChange,
     onSave,
     theme,
-    counters,
   });
 }
 
@@ -50,29 +53,16 @@ export default function GoalEditor({
 
 const renderGoalEditor = ({
   value,
-  timeLimit,
+  timeLimitHours,
+  timeLimitMinutes,
   previousValue,
   onChange,
-  onTimeChange,
+  onHoursChange,
+  onMinutesChange,
   onSave,
   theme,
-  counters = [],
 }) => (
   <View>
-
-    {/* Counter List */}
-    {counters.length > 0 && (
-      <View style={{ marginBottom: 12 }}>
-        <Text style={getSectionTitleStyle(theme)}>Select Counter</Text>
-        {counters.map((counter) => (
-          <View key={counter.id} style={getCounterItemStyle(theme)}>
-            <Text style={getCounterTextStyle(theme)}>
-              {counter.icon} {counter.name}
-            </Text>
-          </View>
-        ))}
-      </View>
-    )}
 
     {/* Previous Goal */}
     {previousValue != null && (
@@ -82,8 +72,9 @@ const renderGoalEditor = ({
     )}
 
     {/* Target Value Input */}
+    <Text style={getLabelStyle(theme)}>Target Value</Text>
     <TextInput
-      placeholder="Enter target value"
+      placeholder="e.g. 10"
       placeholderTextColor={theme.mutedText ?? '#888'}
       keyboardType="numeric"
       value={value}
@@ -91,15 +82,39 @@ const renderGoalEditor = ({
       style={getInputStyle(theme)}
     />
 
-    {/* 🔴 NEW: Time Limit Input (CRITICAL) */}
-    <TextInput
-      placeholder="Enter time limit (hours) e.g. 3"
-      placeholderTextColor={theme.mutedText ?? '#888'}
-      keyboardType="numeric"
-      value={timeLimit}
-      onChangeText={onTimeChange}
-      style={getInputStyle(theme)}
-    />
+    {/* 🆕 Time Limit — Hours + Minutes side by side */}
+    <Text style={getLabelStyle(theme)}>Time Limit (optional)</Text>
+    <View style={getTimeRowStyle()}>
+
+      <View style={getTimeFieldWrapperStyle()}>
+        <TextInput
+          placeholder="0"
+          placeholderTextColor={theme.mutedText ?? '#888'}
+          keyboardType="numeric"
+          value={timeLimitHours}
+          onChangeText={onHoursChange}
+          style={getTimeInputStyle(theme)}
+          maxLength={2}
+        />
+        <Text style={getTimeUnitStyle(theme)}>hrs</Text>
+      </View>
+
+      <Text style={getTimeSeparatorStyle(theme)}>:</Text>
+
+      <View style={getTimeFieldWrapperStyle()}>
+        <TextInput
+          placeholder="00"
+          placeholderTextColor={theme.mutedText ?? '#888'}
+          keyboardType="numeric"
+          value={timeLimitMinutes}
+          onChangeText={onMinutesChange}
+          style={getTimeInputStyle(theme)}
+          maxLength={2}
+        />
+        <Text style={getTimeUnitStyle(theme)}>min</Text>
+      </View>
+
+    </View>
 
     {/* Save Button */}
     <TouchableOpacity
@@ -107,10 +122,9 @@ const renderGoalEditor = ({
       style={getButtonStyle(theme)}
       activeOpacity={0.85}
     >
-      <Text style={getButtonTextStyle(theme)}>
-        Save Goal
-      </Text>
+      <Text style={getButtonTextStyle(theme)}>Save Goal</Text>
     </TouchableOpacity>
+
   </View>
 );
 
@@ -118,52 +132,80 @@ const renderGoalEditor = ({
    STYLES
 --------------------------------- */
 
-const getSectionTitleStyle = (theme) => ({
-  fontSize: 15,
-  fontWeight: '600',
-  color: theme.text,
+const getLabelStyle = (theme) => ({
+  fontSize:     13,
+  fontWeight:   '600',
+  color:        theme.mutedText ?? '#888',
   marginBottom: 6,
-});
-
-const getCounterItemStyle = (theme) => ({
-  padding: 10,
-  borderWidth: 1,
-  borderColor: theme.border ?? 'rgba(255,255,255,0.12)',
-  borderRadius: 8,
-  marginBottom: 6,
-  backgroundColor: theme.card,
-});
-
-const getCounterTextStyle = (theme) => ({
-  color: theme.text,
-  fontSize: 14,
+  marginTop:    4,
 });
 
 const getPreviousValueStyle = (theme) => ({
-  fontSize: 13,
-  color: theme.mutedText ?? '#888',
-  marginBottom: 6,
+  fontSize:     13,
+  color:        theme.mutedText ?? '#888',
+  marginBottom: 8,
 });
 
 const getInputStyle = (theme) => ({
-  borderWidth: 1,
-  borderColor: theme.border ?? '#ccc',
-  borderRadius: 10,
-  padding: 12,
-  marginBottom: 12,
-  color: theme.text,
+  borderWidth:      1,
+  borderColor:      theme.border ?? '#ccc',
+  borderRadius:     10,
+  padding:          12,
+  marginBottom:     14,
+  color:            theme.text,
+  backgroundColor:  theme.card,
+  fontSize:         15,
+});
+
+const getTimeRowStyle = () => ({
+  flexDirection:  'row',
+  alignItems:     'center',
+  marginBottom:   16,
+  gap:            8,
+});
+
+const getTimeFieldWrapperStyle = () => ({
+  flex:           1,
+  flexDirection:  'row',
+  alignItems:     'center',
+  gap:            6,
+});
+
+const getTimeInputStyle = (theme) => ({
+  flex:            1,
+  borderWidth:     1,
+  borderColor:     theme.border ?? '#ccc',
+  borderRadius:    10,
+  padding:         12,
+  color:           theme.text,
   backgroundColor: theme.card,
+  fontSize:        16,
+  fontWeight:      '600',
+  textAlign:       'center',
+});
+
+const getTimeUnitStyle = (theme) => ({
+  fontSize:   13,
+  color:      theme.mutedText ?? '#888',
+  fontWeight: '500',
+});
+
+const getTimeSeparatorStyle = (theme) => ({
+  fontSize:   20,
+  fontWeight: '700',
+  color:      theme.mutedText ?? '#888',
+  marginTop:  -4,
 });
 
 const getButtonStyle = (theme) => ({
   backgroundColor: theme.primary ?? '#007AFF',
   paddingVertical: 14,
-  borderRadius: 12,
-  alignItems: 'center',
+  borderRadius:    12,
+  alignItems:      'center',
 });
 
 const getButtonTextStyle = (theme) => ({
-  color: theme.onPrimary ?? '#fff',
+  color:      theme.onPrimary ?? '#fff',
   fontWeight: 'bold',
-  fontSize: 16,
+  fontSize:   16,
 });

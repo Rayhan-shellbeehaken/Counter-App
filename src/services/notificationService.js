@@ -2,6 +2,7 @@ import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 
+import * as Device from 'expo-device';
 import { NotificationTypeEnum } from '@/enums/NotificationEnums';
 
 /* ---------------------------------
@@ -12,7 +13,6 @@ const isExpoGo = Constants.appOwnership === 'expo';
 
 /* ---------------------------------
    NOTIFICATION HANDLER
-   Must be set at module level (before any scheduling)
 --------------------------------- */
 
 Notifications.setNotificationHandler({
@@ -30,7 +30,6 @@ Notifications.setNotificationHandler({
 
 const createAndroidChannel = async () => {
   if (Platform.OS !== 'android') return;
-
   try {
     await Notifications.setNotificationChannelAsync('goal-reminders', {
       name:             'Goal Reminders',
@@ -49,9 +48,18 @@ const createAndroidChannel = async () => {
 
 export const requestNotificationPermission = async () => {
   try {
-    const { status: existingStatus } =
-      await Notifications.getPermissionsAsync();
+    // Android 12+ needs exact alarm permission
+    if (Platform.OS === 'android' && Platform.Version >= 31) {
+      await Notifications.requestPermissionsAsync({
+        android: {
+          allowAlerts: true,
+          allowBadges: true,
+          allowSounds: true,
+        },
+      });
+    }
 
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
 
     if (existingStatus !== 'granted') {
@@ -60,11 +68,7 @@ export const requestNotificationPermission = async () => {
     }
 
     const isGranted = finalStatus === 'granted';
-
-    if (!isGranted) {
-      console.warn('⚠️ Notification permission denied');
-    }
-
+    if (!isGranted) console.warn('Notification permission denied');
     return isGranted;
   } catch (error) {
     console.error('Error requesting notification permission:', error);
@@ -75,9 +79,8 @@ export const requestNotificationPermission = async () => {
 /* ---------------------------------
    SCHEDULE GOAL REMINDERS
    Schedules 2 notifications:
-     1. Half-time warning  (timeLimitHours / 2)
-     2. Deadline reminder  (timeLimitHours)
-   Returns array of notificationIds to store on the goal.
+     1. Half-time warning  → timeLimitMinutes / 2
+     2. Deadline reminder  → timeLimitMinutes
 --------------------------------- */
 
 export const scheduleGoalReminders = async (goal = {}) => {
@@ -87,7 +90,7 @@ export const scheduleGoalReminders = async (goal = {}) => {
   }
 
   if (!isValidGoalForScheduling(goal)) {
-    console.log('Skipping reminders: goal missing timeLimitHours or targetValue');
+    console.log('Skipping reminders: goal missing timeLimitMinutes or targetValue');
     return [];
   }
 
@@ -96,42 +99,40 @@ export const scheduleGoalReminders = async (goal = {}) => {
   const hasPermission = await requestNotificationPermission();
   if (!hasPermission) return [];
 
-  // Cancel any existing notifications for this goal first
   if (goal?.notificationIds?.length) {
     await cancelGoalNotifications(goal);
   }
 
   const ids = await scheduleHalfTimeAndDeadline(goal);
-
-  console.log(`📅 Scheduled ${ids.length} notification(s) for goal ${goal.id}`);
+  console.log(`Scheduled ${ids.length} notification(s) for goal ${goal.id}`);
   return ids;
 };
 
 const isValidGoalForScheduling = (goal = {}) =>
-  goal?.timeLimitHours > 0 && goal?.targetValue > 0;
+  goal?.timeLimitMinutes > 0 && goal?.targetValue > 0;
 
 /* ---------------------------------
    HALF-TIME + DEADLINE SCHEDULER
 --------------------------------- */
 
 const scheduleHalfTimeAndDeadline = async (goal = {}) => {
-  const totalHours  = goal.timeLimitHours;
-  const halfHours   = totalHours / 2;
+  const totalMinutes = goal.timeLimitMinutes;
+  const halfMinutes  = totalMinutes / 2;
 
   const results = await Promise.allSettled([
     scheduleOneNotification({
       goal,
-      hoursFromNow: halfHours,
-      type:         NotificationTypeEnum.GOAL_HALF_TIME,
-      title:        '⏳ Halfway There!',
-      body:         buildHalfTimeBody(goal),
+      minutesFromNow: halfMinutes,
+      type:           NotificationTypeEnum.GOAL_HALF_TIME,
+      title:          '⏳ Halfway There!',
+      body:           buildHalfTimeBody(goal),
     }),
     scheduleOneNotification({
       goal,
-      hoursFromNow: totalHours,
-      type:         NotificationTypeEnum.GOAL_DEADLINE,
-      title:        '⌛ Time\'s Up!',
-      body:         buildDeadlineBody(goal),
+      minutesFromNow: totalMinutes,
+      type:           NotificationTypeEnum.GOAL_DEADLINE,
+      title:          "⌛ Time's Up!",
+      body:           buildDeadlineBody(goal),
     }),
   ]);
 
@@ -142,17 +143,19 @@ const scheduleHalfTimeAndDeadline = async (goal = {}) => {
 
 /* ---------------------------------
    CORE SCHEDULER
+   Uses DATE trigger instead of TIME_INTERVAL
+   so Android fires it exactly even when backgrounded
 --------------------------------- */
 
 const scheduleOneNotification = async ({
-  goal        = {},
-  hoursFromNow = 1,
-  type        = NotificationTypeEnum.GOAL_REMINDER,
-  title       = '🎯 Goal Reminder',
-  body        = '',
+  goal           = {},
+  minutesFromNow = 1,
+  type           = NotificationTypeEnum.GOAL_REMINDER,
+  title          = '🎯 Goal Reminder',
+  body           = '',
 } = {}) => {
   try {
-    const seconds = hoursFromNow * 60 * 60;
+    const seconds = Math.round(minutesFromNow * 60);
 
     const notificationId = await Notifications.scheduleNotificationAsync({
       content: {
@@ -169,24 +172,24 @@ const scheduleOneNotification = async ({
           priority:  'high',
         }),
       },
+      // 🔑 DATE trigger — Android must fire at exact time even when backgrounded
       trigger: {
-        type:    Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-        seconds,
-        repeats: false,
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: new Date(Date.now() + seconds * 1000),
       },
     });
 
-    console.log(`✅ [${type}] scheduled in ${hoursFromNow}h → id: ${notificationId}`);
+    console.log(`[${type}] scheduled in ${minutesFromNow}min → id: ${notificationId}`);
     return notificationId;
   } catch (error) {
-    console.error(`❌ Failed to schedule [${type}]:`, error);
+    console.error(`Failed to schedule [${type}]:`, error);
     return null;
   }
 };
 
 /* ---------------------------------
    IMMEDIATE NOTIFICATION
-   Used for goal completion (fires instantly)
+   Used for goal completion
 --------------------------------- */
 
 export const showImmediateNotification = async ({
@@ -216,10 +219,10 @@ export const showImmediateNotification = async ({
           priority:  'high',
         }),
       },
-      trigger: null, // null = fire immediately
+      trigger: null,
     });
 
-    console.log('🎉 Completion notification fired:', notificationId);
+    console.log('Completion notification fired:', notificationId);
     return notificationId;
   } catch (error) {
     console.error('Error showing immediate notification:', error);
@@ -239,17 +242,21 @@ export const cancelGoalNotifications = async (goal = {}) => {
     ids.map((id) => Notifications.cancelScheduledNotificationAsync(id))
   );
 
-  console.log(`🗑️ Cancelled ${ids.length} notification(s) for goal ${goal.id}`);
+  console.log(`Cancelled ${ids.length} notification(s) for goal ${goal.id}`);
 };
 
 /* ---------------------------------
-   NOTIFICATION BODY BUILDERS
+   BODY BUILDERS
 --------------------------------- */
 
 const buildHalfTimeBody = (goal = {}) => {
-  const hours  = goal?.timeLimitHours ?? 0;
-  const target = goal?.targetValue    ?? 0;
-  return `Half your time is up (${hours / 2}h passed). Still aiming for ${target}?`;
+  const total  = goal?.timeLimitMinutes ?? 0;
+  const half   = total / 2;
+  const target = goal?.targetValue ?? 0;
+  const label  = half >= 60
+    ? `${Math.round((half / 60) * 10) / 10}h`
+    : `${half}m`;
+  return `${label} passed. Still aiming for ${target}?`;
 };
 
 const buildDeadlineBody = (goal = {}) => {

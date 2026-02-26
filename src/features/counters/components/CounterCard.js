@@ -4,6 +4,7 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { useCounterStore } from '@/store/counterStore';
 import { useUndoRedo } from '@/hooks/useUndoRedo';
 import EditCounterNameModal from '@/features/counters/components/EditCounterNameModal';
+import EditCounterNoteModal from '@/features/counters/components/EditCounterNoteModal';
 
 /* ---------------------------------
    DEFAULTS
@@ -20,6 +21,7 @@ const defaultProps = {
     minValue: null,
     maxValue: null,
     category: 'General',
+    note: '', // ✅ added
   },
 };
 
@@ -30,13 +32,19 @@ const defaultProps = {
 export default function CounterCard({
   counter = defaultProps.counter,
 } = defaultProps) {
-  const { increment, decrement, updateCounter } = useCounterStore();
+  const { increment, decrement, updateCounter, updateCounterNote } =
+    useCounterStore();
+
   const { init, undo, redo } = useUndoRedo(counter.id);
+
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showNoteModal, setShowNoteModal] = useState(false);
 
   useEffect(() => {
     init();
   }, [counter.id]);
+
+  /* ---------- handlers ---------- */
 
   const handleIncrement = () => {
     increment(counter.id, counter.step);
@@ -56,16 +64,28 @@ export default function CounterCard({
     }
   };
 
+  const handleEditNote = () => {
+    setShowNoteModal(true);
+  };
+
+  const handleSaveNote = (newNote = '') => {
+    updateCounterNote(counter.id, newNote);
+  };
+
   return renderCard({
     counter,
     showEditModal,
+    showNoteModal,
     onIncrement: handleIncrement,
     onDecrement: handleDecrement,
     onUndo: undo,
     onRedo: redo,
     onEditName: handleEditName,
     onSaveName: handleSaveName,
-    onCloseModal: () => setShowEditModal(false),
+    onEditNote: handleEditNote,
+    onSaveNote: handleSaveNote,
+    onCloseNameModal: () => setShowEditModal(false),
+    onCloseNoteModal: () => setShowNoteModal(false),
   });
 }
 
@@ -76,17 +96,22 @@ export default function CounterCard({
 const renderCard = ({
   counter = {},
   showEditModal = false,
+  showNoteModal = false,
   onIncrement = () => {},
   onDecrement = () => {},
   onUndo = () => {},
   onRedo = () => {},
   onEditName = () => {},
   onSaveName = () => {},
-  onCloseModal = () => {},
+  onEditNote = () => {},
+  onSaveNote = () => {},
+  onCloseNameModal = () => {},
+  onCloseNoteModal = () => {},
 } = {}) => (
   <>
     <View style={getCardContainerStyle(counter.color)}>
       {renderCardHeader({ counter, onEditName })}
+      {renderNotePreview({ counter, onEditNote })}
       {renderCardValue({ counter })}
       {renderMinMaxSection({ counter })}
       {renderActionButtons({ onIncrement, onDecrement, onUndo, onRedo })}
@@ -96,15 +121,60 @@ const renderCard = ({
       visible={showEditModal}
       currentName={counter.name}
       onSave={onSaveName}
-      onClose={onCloseModal}
+      onClose={onCloseNameModal}
+    />
+
+    <EditCounterNoteModal
+      visible={showNoteModal}
+      currentNote={counter.note}
+      onSave={onSaveNote}
+      onClose={onCloseNoteModal}
     />
   </>
 );
 
-const renderCardHeader = ({
+/* ---------------------------------
+   NOTE PREVIEW
+--------------------------------- */
+
+const renderNotePreview = ({
   counter = {},
-  onEditName = () => {},
-} = {}) => (
+  onEditNote = () => {},
+} = {}) => {
+  const note = typeof counter?.note === 'string' ? counter.note : '';
+
+  if (!note.trim()) {
+    return renderAddNoteButton({ onEditNote });
+  }
+
+  return (
+    <TouchableOpacity
+      onPress={onEditNote}
+      activeOpacity={0.8}
+      style={getNotePreviewContainerStyle()}
+    >
+      <Text style={getNotePreviewTextStyle()} numberOfLines={2}>
+        📝 {note}
+      </Text>
+    </TouchableOpacity>
+  );
+};
+
+const renderAddNoteButton = ({ onEditNote = () => {} } = {}) => (
+  <TouchableOpacity
+    onPress={onEditNote}
+    style={getAddNoteButtonStyle()}
+    activeOpacity={0.8}
+  >
+    <Text style={getAddNoteTextStyle()}>+ Add Note</Text>
+  </TouchableOpacity>
+);
+
+/* ---------------------------------
+   EXISTING RENDERERS
+--------------------------------- */
+
+const renderCardHeader = ({ counter = {}, onEditName = () => {} } = {}) => (
   <View style={getHeaderContainerStyle()}>
     <View style={getHeaderLeftStyle()}>
       <Text style={getIconStyle()}>{counter.icon}</Text>
@@ -155,10 +225,7 @@ const renderActionButtons = ({
   </View>
 );
 
-const renderPrimaryButton = ({
-  label = '',
-  onPress = () => {},
-} = {}) => (
+const renderPrimaryButton = ({ label = '', onPress = () => {} } = {}) => (
   <TouchableOpacity
     onPress={onPress}
     style={getPrimaryButtonStyle()}
@@ -168,10 +235,7 @@ const renderPrimaryButton = ({
   </TouchableOpacity>
 );
 
-const renderSecondaryButton = ({
-  icon = '',
-  onPress = () => {},
-} = {}) => (
+const renderSecondaryButton = ({ icon = '', onPress = () => {} } = {}) => (
   <TouchableOpacity
     onPress={onPress}
     style={getSecondaryButtonStyle()}
@@ -198,6 +262,36 @@ const buildMinMaxText = (minValue = null, maxValue = null) => {
   return parts.join(' • ');
 };
 
+/* ---------------------------------
+   STYLES
+--------------------------------- */
+
+const getNotePreviewContainerStyle = () => ({
+  backgroundColor: 'rgba(255,255,255,0.2)',
+  padding: 10,
+  borderRadius: 12,
+  marginBottom: 12,
+});
+
+const getNotePreviewTextStyle = () => ({
+  color: '#ffffff',
+  fontSize: 14,
+  fontWeight: '500',
+});
+
+const getAddNoteButtonStyle = () => ({
+  backgroundColor: 'rgba(255,255,255,0.15)',
+  paddingVertical: 8,
+  borderRadius: 12,
+  marginBottom: 12,
+  alignItems: 'center',
+});
+
+const getAddNoteTextStyle = () => ({
+  color: '#ffffff',
+  fontWeight: '600',
+  fontSize: 14,
+});
 /* ---------------------------------
    STYLES (PROPORTION FIXED)
 --------------------------------- */

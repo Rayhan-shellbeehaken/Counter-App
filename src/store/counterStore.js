@@ -14,6 +14,14 @@ import { evaluateGoalsForCounter } from '@/hooks/useGoalEvaluator';
 import { getAnalyticsSnapshot } from '@/services/analyticsService';
 
 /* ---------------------------------
+   NORMALIZER (Backward Safe)
+--------------------------------- */
+const normalizeCounter = (counter = {}) => ({
+  ...counter,
+  note: typeof counter?.note === 'string' ? counter.note : '',
+});
+
+/* ---------------------------------
    DEFAULTS
 --------------------------------- */
 const defaultState = {
@@ -35,8 +43,10 @@ export const useCounterStore = create(
       createCounter: (counter = null) => {
         if (!counter?.id) return;
 
+        const safeCounter = normalizeCounter(counter);
+
         set((state) => ({
-          counters: [...state.counters, counter],
+          counters: [...state.counters, safeCounter],
         }));
       },
 
@@ -51,13 +61,37 @@ export const useCounterStore = create(
         if (!counter) return;
 
         const updatedCounter = {
-          ...counter,
+          ...normalizeCounter(counter),
           ...updates,
         };
 
         set({
           counters: state.counters.map((c) =>
-            c.id === id ? updatedCounter : c
+            c.id === id ? updatedCounter : normalizeCounter(c)
+          ),
+        });
+      },
+
+      /* ---------------------------------
+         NOTE UPDATE
+      --------------------------------- */
+      updateCounterNote: (id = '', note = '') => {
+        if (!id) return;
+
+        const state = get();
+        const counter = state.counters.find((c) => c.id === id);
+        if (!counter) return;
+
+        const safeNote = typeof note === 'string' ? note : '';
+
+        const updatedCounter = {
+          ...normalizeCounter(counter),
+          note: safeNote,
+        };
+
+        set({
+          counters: state.counters.map((c) =>
+            c.id === id ? updatedCounter : normalizeCounter(c)
           ),
         });
       },
@@ -67,7 +101,9 @@ export const useCounterStore = create(
       --------------------------------- */
       increment: (id = '', step = 1) => {
         const state = get();
-        const counter = state.counters.find((c) => c.id === id);
+        const counter = normalizeCounter(
+          state.counters.find((c) => c.id === id)
+        );
         if (!counter) return;
 
         const newValue = handleMaxLimitCheck(counter, counter.value + step);
@@ -89,7 +125,7 @@ export const useCounterStore = create(
 
         set({
           counters: state.counters.map((c) =>
-            c.id === id ? updatedCounter : c
+            c.id === id ? updatedCounter : normalizeCounter(c)
           ),
         });
 
@@ -106,7 +142,9 @@ export const useCounterStore = create(
       --------------------------------- */
       decrement: (id = '', step = 1) => {
         const state = get();
-        const counter = state.counters.find((c) => c.id === id);
+        const counter = normalizeCounter(
+          state.counters.find((c) => c.id === id)
+        );
         if (!counter) return;
 
         const newValue = handleMinLimitCheck(counter, counter.value - step);
@@ -128,7 +166,7 @@ export const useCounterStore = create(
 
         set({
           counters: state.counters.map((c) =>
-            c.id === id ? updatedCounter : c
+            c.id === id ? updatedCounter : normalizeCounter(c)
           ),
         });
       },
@@ -139,7 +177,9 @@ export const useCounterStore = create(
       setCounterValue: (id = '', value = 0) => {
         set((state) => ({
           counters: state.counters.map((c) =>
-            c.id === id ? { ...c, value } : c
+            c.id === id
+              ? { ...normalizeCounter(c), value }
+              : normalizeCounter(c)
           ),
         }));
       },
@@ -170,10 +210,9 @@ export const useCounterStore = create(
       },
     }),
     {
-      name: 'counter-storage', // AsyncStorage key
+      name: 'counter-storage',
       storage: createJSONStorage(() => AsyncStorage),
 
-      // Only persist real data (not functions)
       partialize: (state) => ({
         counters: state.counters,
         selectedCategory: state.selectedCategory,
@@ -185,6 +224,7 @@ export const useCounterStore = create(
 /* ---------------------------------
    HELPERS (PURE)
 --------------------------------- */
+
 const handleMaxLimitCheck = (counter = {}, proposedValue = 0) => {
   if (counter?.maxValue == null) return proposedValue;
 

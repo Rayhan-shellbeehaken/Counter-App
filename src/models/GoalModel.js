@@ -5,9 +5,9 @@ import { GoalTypeEnum, GoalStatusEnum } from '@/enums/GoalEnums';
 --------------------------------- */
 
 const defaultParams = {
-  counterId: '',
-  targetValue: 0,
-  timeLimitHours: null,
+  counterId:        '',
+  targetValue:      0,
+  timeLimitMinutes: null, // total minutes (e.g. 90 = 1h 30m)
 };
 
 /* ---------------------------------
@@ -15,16 +15,16 @@ const defaultParams = {
 --------------------------------- */
 
 export const createGoal = ({
-  counterId = defaultParams.counterId,
-  targetValue = defaultParams.targetValue,
-  timeLimitHours = defaultParams.timeLimitHours,
+  counterId        = defaultParams.counterId,
+  targetValue      = defaultParams.targetValue,
+  timeLimitMinutes = defaultParams.timeLimitMinutes,
 } = {}) => ({
-  id: Date.now().toString(),
+  id:               Date.now().toString(),
   counterId,
-  type: GoalTypeEnum.VALUE_TARGET,
+  type:             GoalTypeEnum.VALUE_TARGET,
   targetValue,
-  timeLimitHours,
-  notificationIds: [],
-  status: GoalStatusEnum.ACTIVE,
-  createdAt: new Date().toISOString(),
+  timeLimitMinutes,
+  notificationIds:  [],
+  status:           GoalStatusEnum.ACTIVE,
+  createdAt:        new Date().toISOString(),
 });

@@ -1,6 +1,8 @@
 import React, { useEffect } from 'react';
+import { Alert, Platform } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import * as Notifications from 'expo-notifications';
+import * as IntentLauncher from 'expo-intent-launcher';
 
 import { AuthProvider } from '@/contexts/AuthContext';
 import { useAuth } from '@/hooks/useAuth';
@@ -16,20 +18,18 @@ import RootNavigator from '@/navigation/RootNavigator';
 --------------------------------- */
 
 export default function App() {
-  const mode       = useThemeStore((s) => s.mode);
-  const isHydrated = useThemeStore((s) => s.isHydrated);
+  const mode         = useThemeStore((s) => s.mode);
+  const isHydrated   = useThemeStore((s) => s.isHydrated);
   const hydrateTheme = useThemeStore((s) => s.hydrateTheme);
 
   useEffect(() => {
     hydrateTheme();
   }, [hydrateTheme]);
 
-  // 🆕 Request notification permissions once on app startup
   useEffect(() => {
-    requestNotificationPermission();
+    setupNotifications();
   }, []);
 
-  // 🆕 Handle notification taps (app opened via notification)
   useEffect(() => {
     const subscription = Notifications.addNotificationResponseReceivedListener(
       handleNotificationTap
@@ -37,9 +37,7 @@ export default function App() {
     return () => subscription.remove();
   }, []);
 
-  if (!isHydrated) {
-    return null;
-  }
+  if (!isHydrated) return null;
 
   return (
     <AuthProvider>
@@ -51,9 +49,39 @@ export default function App() {
 }
 
 /* ---------------------------------
+   NOTIFICATION SETUP
+   Runs once on app start.
+   Requests permission then prompts
+   user to disable battery optimization
+   so Android doesn't kill notifications.
+--------------------------------- */
+
+const setupNotifications = async () => {
+  const granted = await requestNotificationPermission();
+  if (!granted) return;
+
+  if (Platform.OS !== 'android') return;
+
+  Alert.alert(
+    '🔔 Enable Reliable Notifications',
+    'To receive goal reminders even when the app is in the background, please disable battery optimization for this app.',
+    [
+      { text: 'Skip', style: 'cancel' },
+      {
+        text: 'Open Settings',
+        onPress: () =>
+          IntentLauncher.startActivityAsync(
+            'android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS'
+          ),
+      },
+    ]
+  );
+};
+
+/* ---------------------------------
    NOTIFICATION TAP HANDLER
    Fires when user taps a notification.
-   Extend this later to deep-link to the relevant counter/goal.
+   Extend this to deep-link to Goals screen.
 --------------------------------- */
 
 const handleNotificationTap = (response = {}) => {

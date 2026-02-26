@@ -1,6 +1,5 @@
 import { CounterCategoryEnum, CounterIconEnum } from '@/enums/CounterEnums';
 
- 
 export const createCounter = ({
   name = '',
   color = '',
@@ -9,7 +8,8 @@ export const createCounter = ({
   category = CounterCategoryEnum.GENERAL,
   minValue = null,
   maxValue = null,
-}) => ({
+  note = '', // ✅ Added
+} = {}) => ({
   id: Date.now().toString(),
   name,
   color,
@@ -19,8 +19,8 @@ export const createCounter = ({
   value: 0,
   minValue,
   maxValue,
+  note: typeof note === 'string' ? note : '', // ✅ Defensive
   createdAt: new Date().toISOString(),
 });
 
- 
 export { CounterIconEnum, CounterCategoryEnum } from '@/enums/CounterEnums';
