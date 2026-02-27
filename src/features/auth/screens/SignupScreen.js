@@ -1,19 +1,48 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
-  Text,
-  TextInput,
-  TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  ActivityIndicator,
-  Alert,
 } from 'react-native';
-import { useForm, Controller } from 'react-hook-form';
 
-import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/hooks/useTheme';
+import { useSignupForm } from '@/hooks/useSignupForm';
+import {
+  AuthButton,
+  AuthHeader,
+  AuthFormField,
+  AuthFooter,
+  AuthErrorBanner,
+} from '@/features/auth/components';
+
+/* ---------------------------------
+   VALIDATION RULES
+--------------------------------- */
+
+const EMAIL_RULES = {
+  required: 'Email is required',
+  pattern: {
+    value:   /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+    message: 'Invalid email address',
+  },
+};
+
+const PASSWORD_RULES = {
+  required:  'Password is required',
+  minLength: {
+    value:   6,
+    message: 'Password must be at least 6 characters',
+  },
+};
+
+// confirmPassword rules need the current password value —
+// generated dynamically as a function
+const getConfirmPasswordRules = (password = '') => ({
+  required: 'Please confirm your password',
+  validate: (value) =>
+    value === password || 'Passwords do not match',
+});
 
 /* ---------------------------------
    DEFAULTS
@@ -24,428 +53,107 @@ const defaultProps = {
 };
 
 /* ---------------------------------
-   COMPONENT
+   SCREEN
+   No logic here — only renders.
+   All state and handlers live in
+   useSignupForm hook.
 --------------------------------- */
 
 export default function SignupScreen({
   navigation = defaultProps.navigation,
 } = defaultProps) {
   const theme = useTheme();
-  const { signup } = useAuth();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-
   const {
-    control,
-    handleSubmit,
-    formState: { errors },
-    watch,
-  } = useForm({
-    defaultValues: {
-      email: '',
-      password: '',
-      confirmPassword: '',
-    },
-  });
-
-  const password = watch('password');
-
-  const onSubmit = async (data = {}) => {
-    await handleSignup(data);
-  };
-
-  const handleSignup = async ({ email = '', password = '' } = {}) => {
-    console.log('📝 Signup attempt:', email);
-    
-    // Clear previous errors
-    setError('');
-    setLoading(true);
-
-    try {
-      const result = await signup(email, password);
-
-      if (!result.success) {
-        console.log('❌ Signup failed:', result.error);
-        setError(result.error);
-        setLoading(false);
-        
-        // Show alert for immediate visibility
-        Alert.alert(
-          '❌ Signup Failed',
-          result.error,
-          [{ text: 'OK' }]
-        );
-        return;
-      }
-
-      console.log('✅ Signup successful');
-      setLoading(false);
-      // Navigation handled by auth state change
-    } catch (err) {
-      console.error('❌ Unexpected signup error:', err);
-      const errorMsg = 'An unexpected error occurred. Please try again.';
-      setError(errorMsg);
-      setLoading(false);
-      
-      Alert.alert('❌ Error', errorMsg);
-    }
-  };
-
-  const handleNavigateToLogin = () => {
-    navigation.navigate('Login');
-  };
-
-  return renderSignupScreen({
-    theme,
     control,
     errors,
     error,
     loading,
     password,
-    onSubmit: handleSubmit(onSubmit),
-    onNavigateToLogin: handleNavigateToLogin,
-  });
-}
+    onSubmit,
+  } = useSignupForm();
 
-/* ---------------------------------
-   RENDER
---------------------------------- */
-
-const renderSignupScreen = ({
-  theme = {},
-  control = {},
-  errors = {},
-  error = '',
-  loading = false,
-  password = '',
-  onSubmit = () => {},
-  onNavigateToLogin = () => {},
-} = {}) => (
-  <KeyboardAvoidingView
-    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    style={getContainerStyle(theme)}
-  >
-    <ScrollView
-      contentContainerStyle={getScrollContainerStyle()}
-      keyboardShouldPersistTaps="handled"
+  return (
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={getContainerStyle(theme)}
     >
-      {renderHeader({ theme })}
-      {renderForm({ theme, control, errors, error, loading, password, onSubmit })}
-      {renderFooter({ theme, onNavigateToLogin })}
-    </ScrollView>
-  </KeyboardAvoidingView>
-);
-
-const renderHeader = ({ theme = {} } = {}) => (
-  <View style={getHeaderStyle()}>
-    <Text style={getTitleStyle(theme)}>Create Account</Text>
-    <Text style={getSubtitleStyle(theme)}>Sign up to get started</Text>
-  </View>
-);
-
-const renderForm = ({
-  theme = {},
-  control = {},
-  errors = {},
-  error = '',
-  loading = false,
-  password = '',
-  onSubmit = () => {},
-} = {}) => (
-  <View style={getFormContainerStyle()}>
-    {renderEmailInput({ theme, control, errors })}
-    {renderPasswordInput({ theme, control, errors })}
-    {renderConfirmPasswordInput({ theme, control, errors, password })}
-    {renderErrorMessage({ error })}
-    {renderSubmitButton({ theme, loading, onSubmit })}
-  </View>
-);
-
-const renderEmailInput = ({
-  theme = {},
-  control = {},
-  errors = {},
-} = {}) => (
-  <View style={getInputContainerStyle()}>
-    <Text style={getLabelStyle(theme)}>Email</Text>
-    <Controller
-      control={control}
-      name="email"
-      rules={{
-        required: 'Email is required',
-        pattern: {
-          value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-          message: 'Invalid email address',
-        },
-      }}
-      render={({ field: { onChange, onBlur, value } }) => (
-        <TextInput
-          style={getInputStyle(theme, !!errors.email)}
-          placeholder="Enter your email"
-          placeholderTextColor={theme.mutedText ?? '#888'}
-          value={value}
-          onChangeText={onChange}
-          onBlur={onBlur}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoCorrect={false}
+      <ScrollView
+        contentContainerStyle={getScrollStyle()}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <AuthHeader
+          title="Create Account"
+          subtitle="Sign up to get started"
         />
-      )}
-    />
-    {renderFieldError({ error: errors.email })}
-  </View>
-);
 
-const renderPasswordInput = ({
-  theme = {},
-  control = {},
-  errors = {},
-} = {}) => (
-  <View style={getInputContainerStyle()}>
-    <Text style={getLabelStyle(theme)}>Password</Text>
-    <Controller
-      control={control}
-      name="password"
-      rules={{
-        required: 'Password is required',
-        minLength: {
-          value: 6,
-          message: 'Password must be at least 6 characters',
-        },
-      }}
-      render={({ field: { onChange, onBlur, value } }) => (
-        <TextInput
-          style={getInputStyle(theme, !!errors.password)}
-          placeholder="Enter your password"
-          placeholderTextColor={theme.mutedText ?? '#888'}
-          value={value}
-          onChangeText={onChange}
-          onBlur={onBlur}
-          secureTextEntry
-          autoCapitalize="none"
-          autoCorrect={false}
+        <View style={getFormStyle()}>
+          <AuthFormField
+            control={control}
+            name="email"
+            label="Email"
+            placeholder="Enter your email"
+            rules={EMAIL_RULES}
+            error={errors.email}
+            keyboardType="email-address"
+          />
+
+          <AuthFormField
+            control={control}
+            name="password"
+            label="Password"
+            placeholder="Enter your password"
+            rules={PASSWORD_RULES}
+            error={errors.password}
+            secureTextEntry
+          />
+
+          <AuthFormField
+            control={control}
+            name="confirmPassword"
+            label="Confirm Password"
+            placeholder="Confirm your password"
+            rules={getConfirmPasswordRules(password)}
+            error={errors.confirmPassword}
+            secureTextEntry
+          />
+
+          <AuthErrorBanner message={error} />
+
+          <AuthButton
+            label="Sign Up"
+            onPress={onSubmit}
+            loading={loading}
+            variant="primary"
+          />
+        </View>
+
+        <AuthFooter
+          message="Already have an account?"
+          linkLabel="Sign In"
+          onPress={() => navigation.navigate('Login')}
         />
-      )}
-    />
-    {renderFieldError({ error: errors.password })}
-  </View>
-);
-
-const renderConfirmPasswordInput = ({
-  theme = {},
-  control = {},
-  errors = {},
-  password = '',
-} = {}) => (
-  <View style={getInputContainerStyle()}>
-    <Text style={getLabelStyle(theme)}>Confirm Password</Text>
-    <Controller
-      control={control}
-      name="confirmPassword"
-      rules={{
-        required: 'Please confirm your password',
-        validate: (value) =>
-          value === password || 'Passwords do not match',
-      }}
-      render={({ field: { onChange, onBlur, value } }) => (
-        <TextInput
-          style={getInputStyle(theme, !!errors.confirmPassword)}
-          placeholder="Confirm your password"
-          placeholderTextColor={theme.mutedText ?? '#888'}
-          value={value}
-          onChangeText={onChange}
-          onBlur={onBlur}
-          secureTextEntry
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
-      )}
-    />
-    {renderFieldError({ error: errors.confirmPassword })}
-  </View>
-);
-
-const renderFieldError = ({ error = null } = {}) => {
-  if (!error) return null;
-
-  return (
-    <Text style={getFieldErrorStyle()}>
-      ⚠️ {error.message}
-    </Text>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
-};
-
-const renderErrorMessage = ({ error = '' } = {}) => {
-  if (!error) return null;
-
-  return (
-    <View style={getErrorContainerStyle()}>
-      <Text style={getErrorIconStyle()}>❌</Text>
-      <Text style={getErrorTextStyle()}>{error}</Text>
-    </View>
-  );
-};
-
-const renderSubmitButton = ({
-  theme = {},
-  loading = false,
-  onSubmit = () => {},
-} = {}) => (
-  <TouchableOpacity
-    style={getSubmitButtonStyle(theme, loading)}
-    onPress={onSubmit}
-    disabled={loading}
-    activeOpacity={0.8}
-  >
-    {loading ? renderLoadingIndicator() : renderSubmitText({ theme })}
-  </TouchableOpacity>
-);
-
-const renderLoadingIndicator = () => (
-  <ActivityIndicator color="#fff" />
-);
-
-const renderSubmitText = ({ theme = {} } = {}) => (
-  <Text style={getSubmitButtonTextStyle(theme)}>Sign Up</Text>
-);
-
-const renderFooter = ({
-  theme = {},
-  onNavigateToLogin = () => {},
-} = {}) => (
-  <View style={getFooterStyle()}>
-    <Text style={getFooterTextStyle(theme)}>Already have an account?</Text>
-    <TouchableOpacity onPress={onNavigateToLogin}>
-      <Text style={getFooterLinkStyle(theme)}>Sign In</Text>
-    </TouchableOpacity>
-  </View>
-);
+}
 
 /* ---------------------------------
    STYLES
 --------------------------------- */
 
 const getContainerStyle = (theme = {}) => ({
-  flex: 1,
+  flex:            1,
   backgroundColor: theme.background,
 });
 
-const getScrollContainerStyle = () => ({
-  flexGrow: 1,
+const getScrollStyle = () => ({
+  flexGrow:       1,
   justifyContent: 'center',
-  padding: 20,
+  padding:        24,
+  gap:            16,
 });
 
-const getHeaderStyle = () => ({
-  marginBottom: 40,
-  alignItems: 'center',
-});
-
-const getTitleStyle = (theme = {}) => ({
-  fontSize: 32,
-  fontWeight: 'bold',
-  color: theme.text,
-  marginBottom: 8,
-});
-
-const getSubtitleStyle = (theme = {}) => ({
-  fontSize: 16,
-  color: theme.mutedText ?? '#888',
-});
-
-const getFormContainerStyle = () => ({
-  marginBottom: 24,
-});
-
-const getInputContainerStyle = () => ({
-  marginBottom: 16,
-});
-
-const getLabelStyle = (theme = {}) => ({
-  fontSize: 14,
-  fontWeight: '600',
-  color: theme.text,
-  marginBottom: 8,
-});
-
-const getInputStyle = (theme = {}, hasError = false) => ({
-  borderWidth: 2,
-  borderColor: hasError ? '#ff4444' : (theme.border ?? '#ddd'),
-  borderRadius: 12,
-  padding: 14,
-  fontSize: 16,
-  color: theme.text,
-  backgroundColor: theme.card,
-});
-
-const getFieldErrorStyle = () => ({
-  color: '#ff4444',
-  fontSize: 13,
-  marginTop: 6,
-  marginLeft: 4,
-  fontWeight: '600',
-});
-
-const getErrorContainerStyle = () => ({
-  flexDirection: 'row',
-  alignItems: 'center',
-  backgroundColor: '#ff4444',
-  borderRadius: 12,
-  padding: 14,
-  marginBottom: 16,
-  shadowColor: '#ff4444',
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.3,
-  shadowRadius: 4,
-  elevation: 4,
-});
-
-const getErrorIconStyle = () => ({
-  fontSize: 20,
-  marginRight: 10,
-});
-
-const getErrorTextStyle = () => ({
-  flex: 1,
-  color: '#fff',
-  fontSize: 14,
-  fontWeight: '600',
-});
-
-const getSubmitButtonStyle = (theme = {}, loading = false) => ({
-  backgroundColor: loading ? theme.mutedText : (theme.primary ?? '#007AFF'),
-  paddingVertical: 16,
-  borderRadius: 12,
-  alignItems: 'center',
-  opacity: loading ? 0.7 : 1,
-  shadowColor: theme.primary ?? '#007AFF',
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.3,
-  shadowRadius: 4,
-  elevation: 3,
-});
-
-const getSubmitButtonTextStyle = (theme = {}) => ({
-  color: '#fff',
-  fontSize: 16,
-  fontWeight: 'bold',
-});
-
-const getFooterStyle = () => ({
-  flexDirection: 'row',
-  justifyContent: 'center',
-  alignItems: 'center',
-  marginTop: 24,
-});
-
-const getFooterTextStyle = (theme = {}) => ({
-  fontSize: 14,
-  color: theme.mutedText ?? '#888',
-  marginRight: 4,
-});
-
-const getFooterLinkStyle = (theme = {}) => ({
-  fontSize: 14,
-  fontWeight: 'bold',
-  color: theme.primary ?? '#007AFF',
+const getFormStyle = () => ({
+  gap: 16,
 });

@@ -9,6 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useThemeStore } from '@/store/themeStore';
 import { getNavigationTheme } from '@/theme/navigationTheme';
 import { requestNotificationPermission } from '@/services/notificationService';
+import { configureGoogleSignIn } from '@/services/googleAuthService'; // ✅ ADD THIS
 
 import AuthNavigator from '@/navigation/AuthNavigator';
 import RootNavigator from '@/navigation/RootNavigator';
@@ -25,6 +26,11 @@ export default function App() {
   useEffect(() => {
     hydrateTheme();
   }, [hydrateTheme]);
+
+  // ✅ CONFIGURE GOOGLE ON APP START
+  useEffect(() => {
+    configureGoogleSignIn();
+  }, []);
 
   useEffect(() => {
     setupNotifications();
@@ -50,10 +56,6 @@ export default function App() {
 
 /* ---------------------------------
    NOTIFICATION SETUP
-   Runs once on app start.
-   Requests permission then prompts
-   user to disable battery optimization
-   so Android doesn't kill notifications.
 --------------------------------- */
 
 const setupNotifications = async () => {
@@ -80,20 +82,13 @@ const setupNotifications = async () => {
 
 /* ---------------------------------
    NOTIFICATION TAP HANDLER
-   Fires when user taps a notification.
-   Extend this to deep-link to Goals screen.
 --------------------------------- */
 
 const handleNotificationTap = (response = {}) => {
   const data = response?.notification?.request?.content?.data ?? {};
   const type = data?.type ?? '';
 
-  console.log('🔔 Notification tapped:', type, data);
-
-  // You can add navigation here later, e.g.:
-  // if (type === NotificationTypeEnum.GOAL_COMPLETED) {
-  //   navigationRef.navigate('Goals');
-  // }
+  console.log('Notification tapped:', type, data);
 };
 
 /* ---------------------------------

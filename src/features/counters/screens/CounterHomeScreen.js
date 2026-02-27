@@ -6,7 +6,7 @@ import { useCounterStore } from '@/store/counterStore';
 import CounterCard from '@/features/counters/components/CounterCard';
 import CounterFormModal from '@/features/counters/components/CounterFormModal';
 import { useTheme } from '@/hooks/useTheme';
-
+import WelcomeHeader from '@/features/counters/components/WelcomeHeader'; // 🆕
 /* ---------------------------------
    DEFAULTS
 --------------------------------- */
@@ -72,6 +72,7 @@ const renderCounterHome = ({
   onAddCounter = () => {},
 } = {}) => (
   <View style={getContainerStyle(theme)}>
+        <WelcomeHeader />      
     {renderAddCounterButton({ theme, onPress: onShowForm })}
     {renderCategoryFilter({ theme, categories, currentCategory, onSelectCategory })}
     {renderCountersList({ theme, counters: filteredCounters, onDeleteCounter })}

@@ -4,6 +4,10 @@ const USER_KEY = 'auth_user';
 
 /* ---------------------------------
    SAVE USER
+   Strips photoURL before saving —
+   base64 strings exceed SecureStore's
+   2048 byte limit. Photo lives in
+   Firestore instead.
 --------------------------------- */
 
 export const saveUserToStorage = async (userData = null) => {
@@ -12,9 +16,11 @@ export const saveUserToStorage = async (userData = null) => {
       await SecureStore.deleteItemAsync(USER_KEY);
       return;
     }
-    const serialized = JSON.stringify(userData);
+
+    // Strip photo — stored in Firestore, not locally
+    const { photoURL, ...userWithoutPhoto } = userData;
+    const serialized = JSON.stringify(userWithoutPhoto);
     await SecureStore.setItemAsync(USER_KEY, serialized);
-    console.log('💾 User saved to secure storage');
   } catch (error) {
     console.error('❌ Failed to save user to storage:', error);
   }
@@ -22,13 +28,15 @@ export const saveUserToStorage = async (userData = null) => {
 
 /* ---------------------------------
    LOAD USER
+   Returns base user data without photo.
+   AuthContext merges the Firestore photo
+   on top after loading.
 --------------------------------- */
 
 export const loadUserFromStorage = async () => {
   try {
     const serialized = await SecureStore.getItemAsync(USER_KEY);
     if (!serialized) return null;
-    console.log('📦 User loaded from secure storage');
     return JSON.parse(serialized);
   } catch (error) {
     console.error('❌ Failed to load user from storage:', error);
@@ -43,7 +51,6 @@ export const loadUserFromStorage = async () => {
 export const clearUserFromStorage = async () => {
   try {
     await SecureStore.deleteItemAsync(USER_KEY);
-    console.log('🗑️ User cleared from secure storage');
   } catch (error) {
     console.error('❌ Failed to clear user from storage:', error);
   }

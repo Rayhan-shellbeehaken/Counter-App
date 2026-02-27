@@ -7,11 +7,52 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff",
-       "plugins": [
+      "backgroundColor": "#ffffff"
+    },
+
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.anonymous.counterapp"
+    },
+
+    "android": {
+      "package": "com.anonymous.counterapp",
+      "googleServicesFile": "./google-services.json",
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.SCHEDULE_EXACT_ALARM",
+        "android.permission.USE_EXACT_ALARM",
+        "android.permission.VIBRATE",
+        "android.permission.WAKE_LOCK",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.READ_MEDIA_IMAGES"
+      ],
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      }
+    },
+
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+
+    "extra": {
+      "eas": {
+        "projectId": "73ecf29e-f371-4cbd-9067-db9b4e55a4bf"
+      }
+    },
+
+    "owner": "zahid7711",
+
+    "plugins": [
+      "expo-secure-store",
+      "@react-native-google-signin/google-signin",
       [
         "expo-notifications",
         {
@@ -20,48 +61,6 @@
           "defaultChannel": "goal-reminders"
         }
       ]
-    ],
-    "android": {
-      "permissions": [
-        "android.permission.RECEIVE_BOOT_COMPLETED",
-        "android.permission.SCHEDULE_EXACT_ALARM",
-        "android.permission.USE_EXACT_ALARM",
-        "android.permission.VIBRATE",
-        "android.permission.WAKE_LOCK",
-        "android.permission.POST_NOTIFICATIONS"
-      ]
-    }
-    },
-    "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.counterapp"
-    },
-    "android": {
-   "permissions": [
-      "android.permission.RECEIVE_BOOT_COMPLETED",
-      "android.permission.SCHEDULE_EXACT_ALARM",
-      "android.permission.USE_EXACT_ALARM"
-    ],
-
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      },
-      
-      "edgeToEdgeEnabled": true,
-      "package": "com.anonymous.counterapp"
-    },
-    "web": {
-      "favicon": "./assets/favicon.png"
-    },
-    "extra": {
-      "eas": {
-        "projectId": "73ecf29e-f371-4cbd-9067-db9b4e55a4bf"
-      }
-    },
-    "owner": "zahid7711",
-    "plugins": [
-      "expo-secure-store"
     ]
   }
 }
